@@ -208,6 +208,20 @@ local function findActiveSections(dataStr)
   end
 end
 
+local function bxor(a, b)
+  if bit and bit.bxor then return bit.bxor(a, b) end
+  local p, c = 1, 0
+  while a > 0 or b > 0 do
+    local ra = a % 2
+    local rb = b % 2
+    if ra ~= rb then c = c + p end
+    a = math.floor(a / 2)
+    b = math.floor(b / 2)
+    p = p * 2
+  end
+  return c
+end
+
 -- Inject item into save file
 function GbaItemInjector.injectItem(filepath, itemId, quantity, pocketKey)
   quantity = math.max(1, math.min(quantity or 99, 999))
@@ -240,11 +254,21 @@ function GbaItemInjector.injectItem(filepath, itemId, quantity, pocketKey)
   end
 
   local secMap, slotBase, saveIndex = findActiveSections(content)
+  local sec0Offset = secMap[0]
   local sec1Offset = secMap[1]
 
   if not sec1Offset then
     return false, "Seção de Itens (Section 1) não encontrada no save."
   end
+
+  -- In FireRed, item quantities in the Bag pockets are XORed with Section 0 security key (+0x0AF8)
+  local secKey = 0
+  if sec0Offset then
+    local keyPos = sec0Offset + 0x0AF8 + 1
+    secKey = (bytes[keyPos] or 0) + (bytes[keyPos + 1] or 0) * 256
+      + (bytes[keyPos + 2] or 0) * 65536 + (bytes[keyPos + 3] or 0) * 16777216
+  end
+  local secKey16 = secKey % 65536
 
   -- Search for existing item in pocket to increase quantity, or find first empty slot
   local pocketStart = sec1Offset + pConfig.offset
@@ -254,7 +278,6 @@ function GbaItemInjector.injectItem(filepath, itemId, quantity, pocketKey)
   for s = 0, pConfig.max - 1 do
     local itemPos = pocketStart + s * 4 + 1
     local curId = bytes[itemPos] + bytes[itemPos + 1] * 256
-    local curQty = bytes[itemPos + 2] + bytes[itemPos + 3] * 256
 
     if curId == itemId then
       existingSlotIndex = s
@@ -269,9 +292,24 @@ function GbaItemInjector.injectItem(filepath, itemId, quantity, pocketKey)
     return false, "O bolso da mochila (" .. pocketKey .. ") está cheio!"
   end
 
+  -- Encode quantity with security key for bag items (PC items are not encrypted)
+  local encQuantity = (pocketKey == "pc") and quantity or bxor(quantity, secKey16)
+
   local finalPos = pocketStart + finalSlot * 4 + 1
   writeUint16(bytes, finalPos, itemId)
-  writeUint16(bytes, finalPos + 2, quantity)
+  writeUint16(bytes, finalPos + 2, encQuantity)
+
+  -- Also inject a duplicate copy into PC Storage (Pocket 0x0298) as backup
+  local pcStart = sec1Offset + POCKET_OFFSETS.pc.offset
+  for ps = 0, POCKET_OFFSETS.pc.max - 1 do
+    local pcPos = pcStart + ps * 4 + 1
+    local curPcId = bytes[pcPos] + bytes[pcPos + 1] * 256
+    if curPcId == itemId or curPcId == 0 then
+      writeUint16(bytes, pcPos, itemId)
+      writeUint16(bytes, pcPos + 2, quantity)
+      break
+    end
+  end
 
   -- Recalculate Section 1 Checksum
   local newChecksum = calculateChecksum(bytes, sec1Offset, 1)
