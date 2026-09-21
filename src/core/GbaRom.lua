@@ -130,47 +130,72 @@ function GbaRom.scanDirectory(dir)
     sourceDir = love.filesystem.getSource():gsub("\\", "/")
   end
 
-  -- Search explicitly in /gba first, then local and relative paths
+  -- Search explicitly in /roms, /gba, local and relative paths
   local searchCandidates = {
+    { prefix = "roms/FireRed_251+final.gba", folder = "roms/", id = "firered" },
+    { prefix = "roms/FireRedDefinitivo.gba", folder = "roms/", id = "firered" },
+    { prefix = "roms/Fire Red(BR-USA).gba", folder = "roms/", id = "firered" },
+    { prefix = "roms/", folder = "roms/" },
+    { prefix = sourceDir .. "/roms/", folder = "roms/" },
     { prefix = "gba/", folder = "/gba" },
-    { prefix = sourceDir .. "/", folder = "/gba" },
     { prefix = sourceDir .. "/gba/", folder = "/gba" },
-    { prefix = "", folder = "/gba" },
-    { prefix = "../gba/", folder = "/gba" },
-    { prefix = "roms/", folder = "roms/" }
+    { prefix = sourceDir .. "/", folder = "/" },
+    { prefix = "", folder = "/" }
   }
 
-  -- 1. Try default filename per game first in /gba
+  -- 1. Check specific priority paths first
+  local f = io.open("roms/FireRed_251+final.gba", "rb")
+  if f then
+    f:close()
+    local info = GbaRom.parseHeader("roms/FireRed_251+final.gba")
+    if info then
+      info.folder = "roms/"
+      info.displayPath = "roms/FireRed_251+final.gba"
+      info.customTitle = "FireRed 251+ (Gen 1 & 2 PT-BR)"
+      results["firered"] = info
+    end
+  end
+
+  -- 2. Try default filename per game
   for _, g in ipairs(GbaRom.KNOWN_GAMES) do
-    local found = nil
-    for _, candidate in ipairs(searchCandidates) do
-      local path = candidate.prefix .. g.defaultRomName
-      local f = io.open(path, "rb")
-      if f then
-        f:close()
-        local info = GbaRom.parseHeader(path)
-        if info then
-          info.folder = "/gba"
-          info.displayPath = "gba/" .. g.defaultRomName
-          found = info
-          break
+    if not results[g.id] then
+      for _, candidate in ipairs(searchCandidates) do
+        if candidate.prefix and not candidate.id then
+          local path = candidate.prefix .. g.defaultRomName
+          local fRom = io.open(path, "rb")
+          if fRom then
+            fRom:close()
+            local info = GbaRom.parseHeader(path)
+            if info then
+              info.folder = candidate.folder
+              info.displayPath = candidate.prefix .. g.defaultRomName
+              results[g.id] = info
+              break
+            end
+          end
         end
       end
     end
-    results[g.id] = found
   end
 
-  -- 2. Scan directory items for any .gba file in /gba
+  -- 3. Scan directory items for any .gba file in root and roms
   if love and love.filesystem and love.filesystem.getDirectoryItems then
-    local items = love.filesystem.getDirectoryItems("")
-    for _, item in ipairs(items) do
-      if item:lower():match("%.gba$") then
-        local fullItemPath = (sourceDir ~= "" and (sourceDir .. "/" .. item)) or item
-        local info = GbaRom.parseHeader(fullItemPath) or GbaRom.parseHeader(item)
-        if info and info.known and not results[info.known.id] then
-          info.folder = "/gba"
-          info.displayPath = "gba/" .. item
-          results[info.known.id] = info
+    local scanFolders = { "", "roms", "gba" }
+    for _, sFolder in ipairs(scanFolders) do
+      local pfx = sFolder ~= "" and (sFolder .. "/") or ""
+      local ok, items = pcall(love.filesystem.getDirectoryItems, sFolder)
+      if ok and items then
+        for _, item in ipairs(items) do
+          if item:lower():match("%.gba$") then
+            local relativePath = pfx .. item
+            local fullItemPath = (sourceDir ~= "" and (sourceDir .. "/" .. relativePath)) or relativePath
+            local info = GbaRom.parseHeader(fullItemPath) or GbaRom.parseHeader(relativePath)
+            if info and info.known and not results[info.known.id] then
+              info.folder = sFolder ~= "" and (sFolder .. "/") or "/"
+              info.displayPath = relativePath
+              results[info.known.id] = info
+            end
+          end
         end
       end
     end

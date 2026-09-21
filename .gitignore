@@ -1,9 +1,10 @@
-﻿# ROM files (legal compliance - do not distribute copyrighted commercial ROMs)
+# ROM files (legal compliance - do not distribute copyrighted commercial ROMs)
 *.gba
 *.gbc
 *.gb
 *.zip
 *.7z
+*.rar
 
 # Battery Save files (personal player saves)
 *.sav

@@ -100,8 +100,10 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   }) then
     local romPath = nil
     local candidates = {
-      "gba/" .. (rom and rom.filename or "FireRed.gba"),
       rom and rom.filepath,
+      rom and rom.displayPath,
+      "roms/FireRed_251+final.gba",
+      "gba/" .. (rom and rom.filename or "FireRed.gba"),
       rom and rom.filename or "FireRed.gba",
       "gba/FireRed.gba",
       "FireRed.gba"
@@ -113,7 +115,7 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
       end
     end
     if not romPath then
-      romPath = "gba/FireRed.gba"
+      romPath = "roms/FireRed_251+final.gba"
     end
 
     GbaSave.setActiveSlot(LauncherView.activeGameId, LauncherView.activeSlotId, romPath)
