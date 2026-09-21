@@ -412,6 +412,12 @@ function LauncherView.drawModsPanel(ww, wh, headerH)
     listY = listY + rowH + 10
   end
 
+  -- Bottom hint
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.textDim, 0.8)
+  love.graphics.print("💡 Dica: Novos patches (.ips, .bps) e mods colocados em gba/mods/ são reconhecidos e listados automaticamente.", pad + 24, contentH + contentY - 24)
+end
+
 function LauncherView.injectItem(itemId, quantity, pocket)
   quantity = quantity or LauncherView.selectedQuantity or 99
   local targets = {
