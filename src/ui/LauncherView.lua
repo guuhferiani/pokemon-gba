@@ -4,11 +4,14 @@ local GbaRom = require("src.core.GbaRom")
 local GbaSave = require("src.core.GbaSave")
 local GbaMods = require("src.core.GbaMods")
 local GbaCartView = require("src.ui.GbaCartView")
+local GbaItemInjector = require("src.core.GbaItemInjector")
 
 local LauncherView = {
   activeGameId = "firered",
-  mainView = "game", -- "game" or "mods"
+  mainView = "game", -- "game" | "mods" | "items"
   modsFilter = nil,
+  itemsCategory = "all",
+  selectedQuantity = 99,
   discoveredRoms = {},
   slots = {},
   activeSlotId = "slot1",
@@ -406,10 +409,219 @@ function LauncherView.drawModsPanel(ww, wh, headerH)
     listY = listY + rowH + 10
   end
 
-  -- Bottom hint
+function LauncherView.injectItem(itemId, quantity, pocket)
+  quantity = quantity or LauncherView.selectedQuantity or 99
+  local targets = {
+    "roms/FireRedDefinitivo.sav",
+    "roms/FireRed_251+final.sav",
+    "FireRed.sav",
+    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+  }
+  
+  local successCount = 0
+  local lastMsg = ""
+  for _, path in ipairs(targets) do
+    local f = io.open(path, "rb")
+    if f then
+      f:close()
+      local ok, msg = GbaItemInjector.injectItem(path, itemId, quantity, pocket)
+      if ok then
+        successCount = successCount + 1
+        lastMsg = msg
+      end
+    end
+  end
+
+  if successCount == 0 then
+    local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+    GbaSave.createSlot(LauncherView.activeGameId, LauncherView.activeSlotId, "ASH")
+    local ok, msg = GbaItemInjector.injectItem(slotPath, itemId, quantity, pocket)
+    if ok then
+      local rf = io.open(slotPath, "rb")
+      if rf then
+        local c = rf:read("*a")
+        rf:close()
+        local wf = io.open("roms/FireRedDefinitivo.sav", "wb")
+        if wf then wf:write(c) wf:close() end
+      end
+      lastMsg = msg
+    else
+      lastMsg = msg or "Erro ao injetar."
+    end
+  end
+
+  LauncherView.showToast(lastMsg)
+  LauncherView.refreshSlots()
+end
+
+function LauncherView.injectMoney(amount)
+  amount = amount or 500000
+  local targets = {
+    "roms/FireRedDefinitivo.sav",
+    "roms/FireRed_251+final.sav",
+    "FireRed.sav",
+    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+  }
+  local lastMsg = ""
+  for _, path in ipairs(targets) do
+    local f = io.open(path, "rb")
+    if f then
+      f:close()
+      local ok, msg = GbaItemInjector.injectMoney(path, amount)
+      if ok then lastMsg = msg end
+    end
+  end
+  LauncherView.showToast(lastMsg ~= "" and lastMsg or "Dinheiro adicionado!")
+  LauncherView.refreshSlots()
+end
+
+function LauncherView.drawItemsPanel(ww, wh, headerH)
+  local pad = 24
+  local contentY = headerH + 16
+  local contentW = ww - pad * 2
+  local contentH = wh - contentY - 48
+
+  Theme.card(pad, contentY, contentW, contentH)
+
+  -- Title & Subtitle
+  Theme.setFont("header")
+  Theme.col(Theme.PAL.white, 1)
+  love.graphics.print("INJETOR DE ITENS NA MOCHILA & PC", pad + 24, contentY + 16)
+
+  Theme.setFont("small")
+  Theme.col(Theme.PAL.textMuted, 1)
+  love.graphics.print("Adicione Master Balls, Doces Raros, Pedras de Evolução e Dinheiro direto ao seu save.", pad + 24, contentY + 42)
+
+  -- Quick Actions Bar
+  local qy = contentY + 68
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.textDim, 1)
+  love.graphics.print("AÇÕES RÁPIDAS (1-CLIQUE):", pad + 24, qy + 5)
+
+  local qx = pad + 190
+  if Kit.button("btn_q_candy", "🍬 +99 Doces Raros", qx, qy, 140, 26, { kind = "accent", font = "micro" }) then
+    LauncherView.injectItem(0x0044, 99, "items")
+  end
+  qx = qx + 148
+  if Kit.button("btn_q_mball", "🔴 +99 Master Balls", qx, qy, 140, 26, { kind = "primary", font = "micro" }) then
+    LauncherView.injectItem(0x0001, 99, "balls")
+  end
+  qx = qx + 148
+  if Kit.button("btn_q_egg", "🥚 +5 Ovos da Sorte", qx, qy, 135, 26, { kind = "accent", font = "micro" }) then
+    LauncherView.injectItem(0x00C3, 5, "items")
+  end
+  qx = qx + 143
+  if Kit.button("btn_q_money", "💰 +$500.000 PokéDollars", qx, qy, 160, 26, { kind = "primary", font = "micro" }) then
+    LauncherView.injectMoney(500000)
+  end
+
+  -- Separator line
+  local sepY = qy + 36
+  Theme.col(Theme.PAL.cardBorder, 0.6)
+  love.graphics.line(pad + 24, sepY, pad + contentW - 24, sepY)
+
+  -- Category Filters & Quantity Selector
+  local filterY = sepY + 10
+  Theme.setFont("small")
+  Theme.col(Theme.PAL.textMuted, 1)
+  love.graphics.print("Categoria:", pad + 24, filterY + 4)
+
+  local cats = {
+    { id = "all", label = "Todas" },
+    { id = "balls", label = "Pokébolas" },
+    { id = "rare", label = "Doces & Raros" },
+    { id = "healing", label = "Cura / Poções" },
+    { id = "stones", label = "Pedras de Evolução" },
+    { id = "hold", label = "Itens de Segurar" }
+  }
+
+  local fx = pad + 100
+  for _, c in ipairs(cats) do
+    local isAct = (LauncherView.itemsCategory == c.id)
+    local fw = love.graphics.getFont():getWidth(c.label) + 18
+    if Kit.button("icat_" .. c.id, c.label, fx, filterY, fw, 26, {
+      kind = "tab",
+      active = isAct,
+      accentCol = Theme.PAL.gbaPurple,
+      font = "micro"
+    }) then
+      LauncherView.itemsCategory = c.id
+    end
+    fx = fx + fw + 6
+  end
+
+  -- Quantity selector on right
+  local qSelectorX = pad + contentW - 220
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.textMuted, 1)
+  love.graphics.print("Qtd:", qSelectorX - 35, filterY + 6)
+  local quantities = { 1, 10, 50, 99 }
+  local qqX = qSelectorX
+  for _, qVal in ipairs(quantities) do
+    local isQAct = (LauncherView.selectedQuantity == qVal)
+    if Kit.button("qty_" .. qVal, qVal .. "x", qqX, filterY, 40, 24, {
+      kind = "tab",
+      active = isQAct,
+      accentCol = Theme.PAL.btnAccent,
+      font = "micro"
+    }) then
+      LauncherView.selectedQuantity = qVal
+    end
+    qqX = qqX + 44
+  end
+
+  -- Item List (2 columns layout)
+  local listY = filterY + 38
+  local colW = math.floor((contentW - 48 - 16) / 2)
+  local itemRowH = 54
+  local filteredItems = {}
+  for _, it in ipairs(GbaItemInjector.ITEMS) do
+    if LauncherView.itemsCategory == "all" or it.cat == LauncherView.itemsCategory then
+      table.insert(filteredItems, it)
+    end
+  end
+
+  local maxRows = 6
+  for i = 1, math.min(#filteredItems, maxRows * 2) do
+    local it = filteredItems[i]
+    local colIndex = (i - 1) % 2
+    local rowIndex = math.floor((i - 1) / 2)
+    local ix = pad + 24 + colIndex * (colW + 16)
+    local iy = listY + rowIndex * (itemRowH + 8)
+
+    local hover = Kit.inRect(ix, iy, colW, itemRowH)
+    Theme.col(hover and Theme.PAL.rowHover or Theme.PAL.rowBg, 0.9)
+    Theme.roundRect(ix, iy, colW, itemRowH, 6, "fill")
+    Theme.col(Theme.PAL.cardBorder, 0.5)
+    Theme.roundRect(ix, iy, colW, itemRowH, 6, "line")
+
+    -- Item name
+    Theme.setFont("body")
+    Theme.col(Theme.PAL.white, 1)
+    love.graphics.print(it.name, ix + 12, iy + 8)
+
+    -- Item description
+    Theme.setFont("micro")
+    Theme.col(Theme.PAL.textMuted, 1)
+    local shortDesc = it.desc or ""
+    if #shortDesc > 48 then shortDesc = shortDesc:sub(1, 45) .. "..." end
+    love.graphics.print(shortDesc, ix + 12, iy + 30)
+
+    -- Inject button
+    local bW = 92
+    local bH = 28
+    local bX = ix + colW - bW - 10
+    local bY = iy + (itemRowH - bH) / 2
+    local btnLabel = "+ Injetar (" .. LauncherView.selectedQuantity .. "x)"
+    if Kit.button("inj_" .. it.id, btnLabel, bX, bY, bW, bH, { kind = "primary", font = "micro" }) then
+      LauncherView.injectItem(it.id, LauncherView.selectedQuantity, it.pocket)
+    end
+  end
+
+  -- Bottom status
   Theme.setFont("micro")
   Theme.col(Theme.PAL.textDim, 0.8)
-  love.graphics.print("💡 Dica: Novos patches (.ips, .bps) e mods colocados em gba/mods/ são reconhecidos e listados automaticamente.", pad + 24, contentH + contentY - 24)
+  love.graphics.print("🛡️ Backup automático criado em saves/backups/ antes de cada injeção.", pad + 24, contentH + contentY - 20)
 end
 
 function LauncherView.draw()
@@ -473,8 +685,8 @@ function LauncherView.draw()
 
   -- MODS TAB
   local isModsTab = (LauncherView.mainView == "mods")
-  local modsTabW = 110
-  if Kit.button("tab_mods", "🧩 MODS", tabX + 8, tabY, modsTabW, tabH, {
+  local modsTabW = 105
+  if Kit.button("tab_mods", "🧩 MODS", tabX + 4, tabY, modsTabW, tabH, {
     kind = "tab",
     active = isModsTab,
     accentCol = Theme.PAL.gbaPurple,
@@ -483,16 +695,30 @@ function LauncherView.draw()
     LauncherView.mainView = "mods"
   end
 
+  -- MOCHILA & ITENS TAB
+  local isItemsTab = (LauncherView.mainView == "items")
+  local itemsTabW = 150
+  if Kit.button("tab_items", "🎒 MOCHILA & ITENS", tabX + modsTabW + 10, tabY, itemsTabW, tabH, {
+    kind = "tab",
+    active = isItemsTab,
+    accentCol = { 220, 140, 40 },
+    font = "small"
+  }) then
+    LauncherView.mainView = "items"
+  end
+
   -- Header right actions
   if Kit.button("btn_open_folder", "📂 Abrir Pasta GBA", ww - 165, 16, 145, 28, { font = "small" }) then
     love.system.openURL("file://" .. love.filesystem.getWorkingDirectory())
   end
 
   -- -------------------------------------------------------------
-  -- 2. MAIN CONTENT (Mods Panel or Game Panel)
+  -- 2. MAIN CONTENT (Mods, Items, or Game Panel)
   -- -------------------------------------------------------------
   if LauncherView.mainView == "mods" then
     LauncherView.drawModsPanel(ww, wh, headerH)
+  elseif LauncherView.mainView == "items" then
+    LauncherView.drawItemsPanel(ww, wh, headerH)
   else
     LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   end
