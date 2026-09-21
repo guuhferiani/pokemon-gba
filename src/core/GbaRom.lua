@@ -143,16 +143,26 @@ function GbaRom.scanDirectory(dir)
     { prefix = "", folder = "/" }
   }
 
-  -- 1. Check specific priority paths first
-  local f = io.open("roms/FireRed_251+final.gba", "rb")
-  if f then
-    f:close()
-    local info = GbaRom.parseHeader("roms/FireRed_251+final.gba")
-    if info then
-      info.folder = "roms/"
-      info.displayPath = "roms/FireRed_251+final.gba"
-      info.customTitle = "FireRed 251+ (Gen 1 & 2 PT-BR)"
-      results["firered"] = info
+  -- 1. Check verified 100% PT-BR FireRed ROMs first
+  local ptbrCandidates = {
+    "roms/FireRedDefinitivo.gba",
+    "roms/Fire Red(BR-USA).gba",
+    "roms/Mega Pack Hack Roms Pokémon/44. Pokemon Fire Red Definitivo 2.0.gba",
+    "FireRed.gba"
+  }
+
+  for _, ptPath in ipairs(ptbrCandidates) do
+    local f = io.open(ptPath, "rb")
+    if f then
+      f:close()
+      local info = GbaRom.parseHeader(ptPath)
+      if info then
+        info.folder = "roms/"
+        info.displayPath = ptPath
+        info.customTitle = "Pokémon FireRed (100% PT-BR)"
+        results["firered"] = info
+        break
+      end
     end
   end
 

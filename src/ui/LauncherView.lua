@@ -102,10 +102,8 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
     local candidates = {
       rom and rom.filepath,
       rom and rom.displayPath,
-      "roms/FireRed_251+final.gba",
-      "gba/" .. (rom and rom.filename or "FireRed.gba"),
-      rom and rom.filename or "FireRed.gba",
-      "gba/FireRed.gba",
+      "roms/FireRedDefinitivo.gba",
+      "roms/Fire Red(BR-USA).gba",
       "FireRed.gba"
     }
     for _, cp in ipairs(candidates) do
