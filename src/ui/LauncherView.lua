@@ -5,13 +5,16 @@ local GbaSave = require("src.core.GbaSave")
 local GbaMods = require("src.core.GbaMods")
 local GbaCartView = require("src.ui.GbaCartView")
 local GbaItemInjector = require("src.core.GbaItemInjector")
+local GbaShinyDex = require("src.core.GbaShinyDex")
 
 local LauncherView = {
   activeGameId = "firered",
-  mainView = "game", -- "game" | "mods" | "items"
+  mainView = "game", -- "game" | "mods" | "items" | "shiny"
   modsFilter = nil,
   itemsCategory = "all",
   selectedQuantity = 99,
+  shinyRate = "default",
+  shinyScanResult = nil,
   discoveredRoms = {},
   slots = {},
   activeSlotId = "slot1",
@@ -624,6 +627,169 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
   love.graphics.print("🛡️ Backup automático criado em saves/backups/ antes de cada injeção.", pad + 24, contentH + contentY - 20)
 end
 
+function LauncherView.refreshShinies()
+  local targets = {
+    "roms/FireRedDefinitivo.sav",
+    "roms/FireRed_251+final.sav",
+    "FireRed.sav",
+    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+  }
+  for _, path in ipairs(targets) do
+    local f = io.open(path, "rb")
+    if f then
+      f:close()
+      LauncherView.shinyScanResult = GbaShinyDex.scanSave(path)
+      return
+    end
+  end
+  LauncherView.shinyScanResult = { shinies = {}, totalPokemon = 0, totalShinies = 0 }
+end
+
+function LauncherView.drawShinyPanel(ww, wh, headerH)
+  if not LauncherView.shinyScanResult then
+    LauncherView.refreshShinies()
+  end
+
+  local pad = 24
+  local contentY = headerH + 16
+  local contentW = ww - pad * 2
+  local contentH = wh - contentY - 48
+
+  Theme.card(pad, contentY, contentW, contentH)
+
+  -- Header Title
+  Theme.setFont("header")
+  Theme.col(Theme.PAL.white, 1)
+  love.graphics.print("✨ REGISTRO DE POKÉMON SHINY (SHINYDEX)", pad + 24, contentY + 16)
+
+  local scan = LauncherView.shinyScanResult or { shinies = {}, totalPokemon = 0, totalShinies = 0 }
+  local pillLabel = string.format("✨ %d Shinies  •  %d Pokémon Registrados", scan.totalShinies, scan.totalPokemon)
+  Kit.pill(pillLabel, pad + contentW - 270, contentY + 16, {
+    bg = { 130, 95, 20 },
+    color = { 255, 235, 120 },
+    font = "micro"
+  })
+
+  if Kit.button("btn_refresh_shiny", "🔄 Atualizar", pad + contentW - 85, contentY + 15, 65, 24, { kind = "accent", font = "micro" }) then
+    LauncherView.refreshShinies()
+    LauncherView.showToast("Save escaneado! " .. scan.totalShinies .. " Shiny(s) encontrados.")
+  end
+
+  Theme.setFont("small")
+  Theme.col(Theme.PAL.textMuted, 1)
+  love.graphics.print("Gerencie a taxa de aparição de Shinies e acompanhe seus monstrinhos raros capturados.", pad + 24, contentY + 42)
+
+  -- Top Section: Shiny Rate Selector
+  local rateY = contentY + 68
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.textDim, 1)
+  love.graphics.print("TAXA DE APARIÇÃO DE SHINY:", pad + 24, rateY + 5)
+
+  local rx = pad + 195
+  for _, r in ipairs(GbaShinyDex.RATES) do
+    local isAct = (LauncherView.shinyRate == r.id)
+    local bw = love.graphics.getFont():getWidth(r.label) + 16
+    if Kit.button("srate_" .. r.id, r.label, rx, rateY, bw, 26, {
+      kind = "tab",
+      active = isAct,
+      accentCol = { 240, 190, 40 },
+      font = "micro"
+    }) then
+      LauncherView.shinyRate = r.id
+      LauncherView.showToast("Taxa de Shiny configurada para: " .. r.label)
+    end
+    rx = rx + bw + 6
+  end
+
+  -- Rate description hint
+  local curRateDef = nil
+  for _, r in ipairs(GbaShinyDex.RATES) do
+    if r.id == LauncherView.shinyRate then curRateDef = r break end
+  end
+  local rateDesc = curRateDef and curRateDef.desc or ""
+  local sepY = rateY + 34
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.amber, 0.9)
+  love.graphics.print("ℹ️ " .. rateDesc, pad + 24, sepY)
+
+  -- Separator line
+  local lineY = sepY + 18
+  Theme.col(Theme.PAL.cardBorder, 0.6)
+  love.graphics.line(pad + 24, lineY, pad + contentW - 24, lineY)
+
+  -- Bottom Section: Shinies Gallery
+  local galY = lineY + 12
+  Theme.setFont("header")
+  Theme.col(Theme.PAL.white, 1)
+  love.graphics.print("SHINIES CAPTURADOS", pad + 24, galY)
+
+  local listY = galY + 32
+  local colW = math.floor((contentW - 48 - 16) / 2)
+  local rowH = 64
+
+  if #scan.shinies == 0 then
+    -- Empty State Card
+    local emptyH = 130
+    Theme.col(Theme.PAL.cardHeader, 0.6)
+    Theme.roundRect(pad + 24, listY, contentW - 48, emptyH, 8, "fill")
+    Theme.col({ 180, 130, 30 }, 0.5)
+    Theme.roundRect(pad + 24, listY, contentW - 48, emptyH, 8, "line")
+
+    Theme.setFont("body")
+    Theme.col(Theme.PAL.amber, 1)
+    love.graphics.print("✨ Nenhum Pokémon Shiny capturado ainda neste Save!", pad + 44, listY + 28)
+
+    Theme.setFont("small")
+    Theme.col(Theme.PAL.textMuted, 1)
+    love.graphics.print("• Escolha uma taxa de aparição mais alta acima (ex: 1/512 ou 100% para teste).", pad + 44, listY + 56)
+    love.graphics.print("• Entre na grama alta no jogo, capture o Pokémon e salve o jogo.", pad + 44, listY + 76)
+    love.graphics.print("• Ao voltar nesta tela e clicar em 🔄 Atualizar, seu Shiny aparecerá registrado aqui!", pad + 44, listY + 96)
+  else
+    -- Shinies Cards Grid
+    local maxShinies = 8
+    for i = 1, math.min(#scan.shinies, maxShinies) do
+      local sMon = scan.shinies[i]
+      local colIndex = (i - 1) % 2
+      local rowIndex = math.floor((i - 1) / 2)
+      local sx = pad + 24 + colIndex * (colW + 16)
+      local sy = listY + rowIndex * (rowH + 8)
+
+      local hover = Kit.inRect(sx, sy, colW, rowH)
+      Theme.col(hover and { 45, 38, 25 } or { 32, 28, 20 }, 0.95)
+      Theme.roundRect(sx, sy, colW, rowH, 6, "fill")
+      Theme.col({ 220, 175, 45 }, 0.8)
+      Theme.roundRect(sx, sy, colW, rowH, 6, "line")
+
+      -- Shiny badge
+      Kit.pill("✨ SHINY", sx + 10, sy + 10, {
+        bg = { 180, 135, 25 },
+        color = Theme.PAL.white,
+        font = "micro"
+      })
+
+      -- Name & Nickname
+      Theme.setFont("body")
+      Theme.col(Theme.PAL.white, 1)
+      local dispTitle = string.format("%s (#%03d)", sMon.speciesName, sMon.speciesId)
+      if sMon.nickname ~= sMon.speciesName then
+        dispTitle = dispTitle .. ' "' .. sMon.nickname .. '"'
+      end
+      love.graphics.print(dispTitle, sx + 75, sy + 10)
+
+      -- Stats line
+      Theme.setFont("small")
+      Theme.col(Theme.PAL.textMuted, 1)
+      local statStr = string.format("Nv. %d  •  Natureza: %s  •  Local: %s", sMon.level, sMon.nature, sMon.location)
+      love.graphics.print(statStr, sx + 12, sy + 36)
+    end
+  end
+
+  -- Bottom status
+  Theme.setFont("micro")
+  Theme.col(Theme.PAL.textDim, 0.8)
+  love.graphics.print("🌟 Todos os dados são sincronizados em tempo real com o arquivo .sav do jogo.", pad + 24, contentH + contentY - 20)
+end
+
 function LauncherView.draw()
   local ww = love.graphics.getWidth()
   local wh = love.graphics.getHeight()
@@ -685,7 +851,7 @@ function LauncherView.draw()
 
   -- MODS TAB
   local isModsTab = (LauncherView.mainView == "mods")
-  local modsTabW = 105
+  local modsTabW = 100
   if Kit.button("tab_mods", "🧩 MODS", tabX + 4, tabY, modsTabW, tabH, {
     kind = "tab",
     active = isModsTab,
@@ -697,7 +863,7 @@ function LauncherView.draw()
 
   -- MOCHILA & ITENS TAB
   local isItemsTab = (LauncherView.mainView == "items")
-  local itemsTabW = 150
+  local itemsTabW = 145
   if Kit.button("tab_items", "🎒 MOCHILA & ITENS", tabX + modsTabW + 10, tabY, itemsTabW, tabH, {
     kind = "tab",
     active = isItemsTab,
@@ -707,18 +873,33 @@ function LauncherView.draw()
     LauncherView.mainView = "items"
   end
 
+  -- SHINY DEX TAB
+  local isShinyTab = (LauncherView.mainView == "shiny")
+  local shinyTabW = 135
+  if Kit.button("tab_shiny", "✨ SHINY DEX", tabX + modsTabW + itemsTabW + 16, tabY, shinyTabW, tabH, {
+    kind = "tab",
+    active = isShinyTab,
+    accentCol = { 245, 195, 45 },
+    font = "small"
+  }) then
+    LauncherView.mainView = "shiny"
+    LauncherView.refreshShinies()
+  end
+
   -- Header right actions
   if Kit.button("btn_open_folder", "📂 Abrir Pasta GBA", ww - 165, 16, 145, 28, { font = "small" }) then
     love.system.openURL("file://" .. love.filesystem.getWorkingDirectory())
   end
 
   -- -------------------------------------------------------------
-  -- 2. MAIN CONTENT (Mods, Items, or Game Panel)
+  -- 2. MAIN CONTENT (Mods, Items, Shiny, or Game Panel)
   -- -------------------------------------------------------------
   if LauncherView.mainView == "mods" then
     LauncherView.drawModsPanel(ww, wh, headerH)
   elseif LauncherView.mainView == "items" then
     LauncherView.drawItemsPanel(ww, wh, headerH)
+  elseif LauncherView.mainView == "shiny" then
+    LauncherView.drawShinyPanel(ww, wh, headerH)
   else
     LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   end
