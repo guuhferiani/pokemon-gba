@@ -420,67 +420,84 @@ end
 
 function LauncherView.injectItem(itemId, quantity, pocket)
   quantity = quantity or LauncherView.selectedQuantity or 99
-  local targets = {
-    "roms/FireRedDefinitivo.sav",
-    "roms/FireRed_251+final.sav",
-    "FireRed.sav",
-    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-  }
+  local activeRom = LauncherView.getActiveRom()
+  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
   
-  local successCount = 0
-  local lastMsg = ""
-  for _, path in ipairs(targets) do
-    local f = io.open(path, "rb")
-    if f then
-      f:close()
-      local ok, msg = GbaItemInjector.injectItem(path, itemId, quantity, pocket)
-      if ok then
-        successCount = successCount + 1
-        lastMsg = msg
+  local f = io.open(primarySave, "rb")
+  if not f then
+    local fallbackPaths = { "roms/FireRedDefinitivo.sav", "FireRed.sav", "roms/FireRed_251+final.sav" }
+    for _, fp in ipairs(fallbackPaths) do
+      local fTest = io.open(fp, "rb")
+      if fTest then
+        fTest:close()
+        primarySave = fp
+        break
       end
     end
+  else
+    f:close()
   end
 
-  if successCount == 0 then
-    local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-    GbaSave.createSlot(LauncherView.activeGameId, LauncherView.activeSlotId, "ASH")
-    local ok, msg = GbaItemInjector.injectItem(slotPath, itemId, quantity, pocket)
-    if ok then
-      local rf = io.open(slotPath, "rb")
-      if rf then
-        local c = rf:read("*a")
-        rf:close()
-        local wf = io.open("roms/FireRedDefinitivo.sav", "wb")
-        if wf then wf:write(c) wf:close() end
+  local ok, msg = GbaItemInjector.injectItem(primarySave, itemId, quantity, pocket)
+  if ok then
+    -- Sync updated save to saves/ folder and other active copies
+    local fRead = io.open(primarySave, "rb")
+    if fRead then
+      local data = fRead:read("*a")
+      fRead:close()
+      
+      if love and love.filesystem then
+        love.filesystem.createDirectory(GbaSave.getSaveDir())
+      else
+        os.execute('mkdir "' .. GbaSave.getSaveDir() .. '" 2>nul')
       end
-      lastMsg = msg
-    else
-      lastMsg = msg or "Erro ao injetar."
-    end
-  end
 
-  LauncherView.showToast(lastMsg)
+      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+      local fSlot = io.open(slotPath, "wb")
+      if fSlot then fSlot:write(data) fSlot:close() end
+      
+      if primarySave ~= "roms/FireRedDefinitivo.sav" then
+        local fDef = io.open("roms/FireRedDefinitivo.sav", "wb")
+        if fDef then fDef:write(data) fDef:close() end
+      end
+    end
+    LauncherView.showToast("✨ " .. tostring(msg))
+  else
+    LauncherView.showToast(tostring(msg or "Erro ao injetar item."))
+  end
   LauncherView.refreshSlots()
 end
 
 function LauncherView.injectMoney(amount)
   amount = amount or 500000
-  local targets = {
-    "roms/FireRedDefinitivo.sav",
-    "roms/FireRed_251+final.sav",
-    "FireRed.sav",
-    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-  }
-  local lastMsg = ""
-  for _, path in ipairs(targets) do
-    local f = io.open(path, "rb")
-    if f then
-      f:close()
-      local ok, msg = GbaItemInjector.injectMoney(path, amount)
-      if ok then lastMsg = msg end
+  local activeRom = LauncherView.getActiveRom()
+  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
+  
+  local f = io.open(primarySave, "rb")
+  if not f then
+    local fallbackPaths = { "roms/FireRedDefinitivo.sav", "FireRed.sav", "roms/FireRed_251+final.sav" }
+    for _, fp in ipairs(fallbackPaths) do
+      local fTest = io.open(fp, "rb")
+      if fTest then fTest:close() primarySave = fp break end
     end
+  else
+    f:close()
   end
-  LauncherView.showToast(lastMsg ~= "" and lastMsg or "Dinheiro adicionado!")
+
+  local ok, msg = GbaItemInjector.injectMoney(primarySave, amount)
+  if ok then
+    local fRead = io.open(primarySave, "rb")
+    if fRead then
+      local data = fRead:read("*a")
+      fRead:close()
+      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+      local fSlot = io.open(slotPath, "wb")
+      if fSlot then fSlot:write(data) fSlot:close() end
+    end
+    LauncherView.showToast("💰 " .. tostring(msg))
+  else
+    LauncherView.showToast(tostring(msg or "Erro ao adicionar dinheiro."))
+  end
   LauncherView.refreshSlots()
 end
 
