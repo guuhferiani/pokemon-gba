@@ -501,6 +501,27 @@ function LauncherView.injectMoney(amount)
   LauncherView.refreshSlots()
 end
 
+function LauncherView.unlockNationalDex()
+  local activeRom = LauncherView.getActiveRom()
+  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
+  
+  local ok, msg = GbaItemInjector.unlockNationalDex(primarySave)
+  if ok then
+    local fRead = io.open(primarySave, "rb")
+    if fRead then
+      local data = fRead:read("*a")
+      fRead:close()
+      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+      local fSlot = io.open(slotPath, "wb")
+      if fSlot then fSlot:write(data) fSlot:close() end
+    end
+    LauncherView.showToast("📖 Pokédex Nacional (251 Pokémon) desbloqueada!")
+  else
+    LauncherView.showToast(tostring(msg or "Erro ao desbloquear National Dex."))
+  end
+  LauncherView.refreshSlots()
+end
+
 function LauncherView.drawItemsPanel(ww, wh, headerH)
   local pad = 24
   local contentY = headerH + 16
@@ -524,21 +545,25 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
   Theme.col(Theme.PAL.textDim, 1)
   love.graphics.print("AÇÕES RÁPIDAS (1-CLIQUE):", pad + 24, qy + 5)
 
-  local qx = pad + 190
-  if Kit.button("btn_q_candy", "🍬 +99 Doces Raros", qx, qy, 140, 26, { kind = "accent", font = "micro" }) then
+  local qx = pad + 180
+  if Kit.button("btn_q_candy", "🍬 +99 Doces", qx, qy, 110, 26, { kind = "accent", font = "micro" }) then
     LauncherView.injectItem(0x0044, 99, "items")
   end
-  qx = qx + 148
-  if Kit.button("btn_q_mball", "🔴 +99 Master Balls", qx, qy, 140, 26, { kind = "primary", font = "micro" }) then
+  qx = qx + 118
+  if Kit.button("btn_q_mball", "🔴 +99 Master", qx, qy, 115, 26, { kind = "primary", font = "micro" }) then
     LauncherView.injectItem(0x0001, 99, "balls")
   end
-  qx = qx + 148
-  if Kit.button("btn_q_egg", "🥚 +5 Ovos da Sorte", qx, qy, 135, 26, { kind = "accent", font = "micro" }) then
+  qx = qx + 123
+  if Kit.button("btn_q_egg", "🥚 +5 Ovos XP", qx, qy, 110, 26, { kind = "accent", font = "micro" }) then
     LauncherView.injectItem(0x00C3, 5, "items")
   end
-  qx = qx + 143
-  if Kit.button("btn_q_money", "💰 +$500.000 PokéDollars", qx, qy, 160, 26, { kind = "primary", font = "micro" }) then
+  qx = qx + 118
+  if Kit.button("btn_q_money", "💰 +$500.000", qx, qy, 110, 26, { kind = "primary", font = "micro" }) then
     LauncherView.injectMoney(500000)
+  end
+  qx = qx + 118
+  if Kit.button("btn_q_natdex", "📖 National Dex (251)", qx, qy, 150, 26, { kind = "accent", font = "micro" }) then
+    LauncherView.unlockNationalDex()
   end
 
   -- Separator line

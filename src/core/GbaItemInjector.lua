@@ -381,4 +381,64 @@ function GbaItemInjector.injectMoney(filepath, amount)
   return true, string.format("Dinheiro atualizado para $%d PokéDollars!", amount)
 end
 
+-- Unlock National Pokedex in Save (All 251 / 386 Pokémon entries visible)
+function GbaItemInjector.unlockNationalDex(filepath)
+  local f = io.open(filepath, "rb")
+  if not f then return false, "Não foi possível abrir o save." end
+  local content = f:read("*a")
+  f:close()
+
+  if #content < 0x10000 then return false, "Save inválido." end
+
+  backupSave(filepath)
+
+  local bytes = {}
+  for i = 1, #content do bytes[i] = string.byte(content, i) end
+
+  local secMap = findActiveSections(content)
+  local sec0Offset = secMap[0]
+  local sec1Offset = secMap[1]
+
+  if not sec0Offset or not sec1Offset then
+    return false, "Estrutura do save não encontrada."
+  end
+
+  -- Enable National Dex in Section 0
+  bytes[sec0Offset + 0x0019 + 1] = 0x01 -- Has Pokédex
+  bytes[sec0Offset + 0x001A + 1] = 0xDA -- Pokedex Order
+  bytes[sec0Offset + 0x001B + 1] = 0x02 -- Has National Dex Mode (2 = Full National Dex)
+
+  -- Set National Dex Flags in Section 1 (Offset +0x0EE0)
+  -- FLAG_SYS_NATIONAL_DEX (0x829)
+  local natFlagByte = sec1Offset + 0x0EE0 + math.floor(0x829 / 8) + 1
+  if natFlagByte <= #bytes then
+    local cur = bytes[natFlagByte] or 0
+    bytes[natFlagByte] = cur % 4 < 2 and (cur + 2) or cur -- set bit 1 (0x02)
+  end
+
+  -- FLAG_SYS_POKEDEX_GET (0x82A)
+  local pokFlagByte = sec1Offset + 0x0EE0 + math.floor(0x82A / 8) + 1
+  if pokFlagByte <= #bytes then
+    local cur = bytes[pokFlagByte] or 0
+    bytes[pokFlagByte] = cur % 8 < 4 and (cur + 4) or cur -- set bit 2 (0x04)
+  end
+
+  -- Recalculate Section 0 and Section 1 Checksums
+  local chk0 = calculateChecksum(bytes, sec0Offset, 0)
+  writeUint16(bytes, sec0Offset + 0x0FF6 + 1, chk0)
+
+  local chk1 = calculateChecksum(bytes, sec1Offset, 1)
+  writeUint16(bytes, sec1Offset + 0x0FF6 + 1, chk1)
+
+  local outStr = {}
+  for i = 1, #bytes do outStr[i] = string.char(bytes[i]) end
+
+  local wf = io.open(filepath, "wb")
+  if not wf then return false, "Erro ao gravar save." end
+  wf:write(table.concat(outStr))
+  wf:close()
+
+  return true, "Pokédex Nacional desbloqueada com sucesso! Todos os 251 Pokémon agora aparecem na Pokédex."
+end
+
 return GbaItemInjector
