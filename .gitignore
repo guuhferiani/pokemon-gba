@@ -21,3 +21,5 @@ crash.dmp
 Thumbs.db
 .vscode/
 .idea/
+*.pdb
+tools/HexManiacAdvance/

@@ -98,7 +98,8 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   -- Play & Cart Buttons
   local btnY = contentY + 28 + cartAreaH + 10
   local playText = romReady and ("JOGAR " .. game.name:upper()) or "ROMS DISPONÍVEIS NA PASTA"
-  if Kit.button("btn_play", playText, pad, btnY, leftW, 40, {
+  local playW = romReady and (leftW - 130) or leftW
+  if Kit.button("btn_play", playText, pad, btnY, playW, 40, {
     kind = romReady and "primary" or "neutral",
     icon = romReady and "play" or nil,
     disabled = not romReady,
@@ -119,7 +120,7 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
       end
     end
     if not romPath then
-      romPath = "roms/FireRed_251+final.gba"
+      romPath = "roms/FireRedDefinitivo.gba"
     end
 
     GbaSave.setActiveSlot(LauncherView.activeGameId, LauncherView.activeSlotId, romPath)
@@ -152,6 +153,18 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
       else
         os.execute('start "" "' .. romPath .. '"')
       end
+    end
+  end
+
+  if romReady then
+    if Kit.button("btn_hma_game", "🛠️ MOD HMA", pad + playW + 8, btnY, 122, 40, {
+      kind = "accent",
+      font = "small"
+    }) then
+      local hmaExe = "tools/HexManiacAdvance/HexManiacAdvance.exe"
+      local romPath = (rom and rom.displayPath) or "roms/FireRedDefinitivo.gba"
+      os.execute('start "" "' .. hmaExe:gsub('/', '\\') .. '" "' .. romPath:gsub('/', '\\') .. '"')
+      LauncherView.showToast("Abrindo Hex Maniac Advance com " .. romPath .. "...")
     end
   end
 
@@ -935,6 +948,16 @@ function LauncherView.draw()
   end
 
   -- Header right actions
+  if Kit.button("btn_open_hma", "🛠️ Editor HMA", ww - 315, 16, 140, 28, { kind = "primary", font = "small" }) then
+    local hmaExe = "tools/HexManiacAdvance/HexManiacAdvance.exe"
+    local activeRom = LauncherView.getActiveRom()
+    local romPath = (activeRom and activeRom.displayPath) or "roms/FireRedDefinitivo.gba"
+    local winHma = hmaExe:gsub('/', '\\')
+    local winRom = romPath:gsub('/', '\\')
+    os.execute('start "" "' .. winHma .. '" "' .. winRom .. '"')
+    LauncherView.showToast("Iniciando Hex Maniac Advance...")
+  end
+
   if Kit.button("btn_open_folder", "📂 Abrir Pasta GBA", ww - 165, 16, 145, 28, { font = "small" }) then
     love.system.openURL("file://" .. love.filesystem.getWorkingDirectory())
   end
