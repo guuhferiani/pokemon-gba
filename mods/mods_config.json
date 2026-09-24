@@ -1,8 +1,9 @@
 {
   "fast_text_instant": false,
   "run_indoors": true,
+  "exp_share_modern": true,
+  "physical_special_split": true,
   "ptbr_firered": false,
   "reusable_tms": false,
-  "exp_share_modern": true,
   "version": 1
 }

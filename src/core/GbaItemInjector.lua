@@ -398,17 +398,35 @@ function GbaItemInjector.unlockNationalDex(filepath)
   local secMap = findActiveSections(content)
   local sec0Offset = secMap[0]
   local sec1Offset = secMap[1]
+  local sec2Offset = secMap[2]
 
-  if not sec0Offset or not sec1Offset then
+  if not sec0Offset or not sec1Offset or not sec2Offset then
     return false, "Estrutura do save não encontrada."
   end
 
-  -- Enable National Dex in Section 0
+  -- 1. Enable National Dex in Section 0 (SaveBlock2)
+  bytes[sec0Offset + 0x0017 + 1] = 0xB9 -- Magic Byte (BPRE binary)
+  bytes[sec0Offset + 0x0018 + 1] = 0x01 -- National Dex Order Mode
   bytes[sec0Offset + 0x0019 + 1] = 0x01 -- Has Pokédex
-  bytes[sec0Offset + 0x001A + 1] = 0xDA -- Pokedex Order
+  bytes[sec0Offset + 0x001A + 1] = 0xB9 -- National Magic Byte (0xB9 oficial para FireRed/LeafGreen)
   bytes[sec0Offset + 0x001B + 1] = 0x02 -- Has National Dex Mode (2 = Full National Dex)
 
-  -- Set National Dex Flags in Section 1 (Offset +0x0EE0)
+  -- Mark all 386 Pokémon as Owned (0x28..0x58, 49 bytes) and Seen (0x5C, 0x90, 0xC4)
+  for b = 0, 48 do
+    local val = (b == 48) and 0x03 or 0xFF
+    bytes[sec0Offset + 0x0028 + b + 1] = val -- owned
+    bytes[sec0Offset + 0x005C + b + 1] = val -- seenA
+    bytes[sec0Offset + 0x0090 + b + 1] = val -- seenB
+    bytes[sec0Offset + 0x00C4 + b + 1] = val -- seenC
+  end
+
+  -- 2. Set National Dex Flags in Section 1 (Offset +0x0EE0 & Offset +0x0E5C)
+  local binaryFlagByte = sec1Offset + 0x0E5C + 1
+  if binaryFlagByte <= #bytes then
+    local cur = bytes[binaryFlagByte] or 0
+    bytes[binaryFlagByte] = cur % 2 < 1 and (cur + 1) or cur
+  end
+
   -- FLAG_SYS_NATIONAL_DEX (0x829)
   local natFlagByte = sec1Offset + 0x0EE0 + math.floor(0x829 / 8) + 1
   if natFlagByte <= #bytes then
@@ -423,12 +441,20 @@ function GbaItemInjector.unlockNationalDex(filepath)
     bytes[pokFlagByte] = cur % 8 < 4 and (cur + 4) or cur -- set bit 2 (0x04)
   end
 
-  -- Recalculate Section 0 and Section 1 Checksums
+  -- 3. Set VAR_NATIONAL_DEX (0x404E) = 0x6258 in Section 1 (+0x0F10) & Section 2 (+0x009C)
+  writeUint16(bytes, sec1Offset + 0x0F10 + 1, 0x6258)
+  local varOffset = sec2Offset + (0x404E - 0x4000) * 2
+  writeUint16(bytes, varOffset + 1, 0x6258)
+
+  -- Recalculate Section 0, 1 and 2 Checksums
   local chk0 = calculateChecksum(bytes, sec0Offset, 0)
   writeUint16(bytes, sec0Offset + 0x0FF6 + 1, chk0)
 
   local chk1 = calculateChecksum(bytes, sec1Offset, 1)
   writeUint16(bytes, sec1Offset + 0x0FF6 + 1, chk1)
+
+  local chk2 = calculateChecksum(bytes, sec2Offset, 2)
+  writeUint16(bytes, sec2Offset + 0x0FF6 + 1, chk2)
 
   local outStr = {}
   for i = 1, #bytes do outStr[i] = string.char(bytes[i]) end
@@ -438,7 +464,69 @@ function GbaItemInjector.unlockNationalDex(filepath)
   wf:write(table.concat(outStr))
   wf:close()
 
-  return true, "Pokédex Nacional desbloqueada com sucesso! Todos os 251 Pokémon agora aparecem na Pokédex."
+  return true, "Pokédex Nacional (386 Pokémon) 100% registrada e desbloqueada com sucesso!"
+end
+
+-- Fast-Forward Test Tool: Unlocks Kanto Champion, 8 Badges, S.S. Ticket and Johto access
+function GbaItemInjector.unlockKantoChampAndJohto(filepath)
+  local f = io.open(filepath, "rb")
+  if not f then return false, "Não foi possível abrir o save." end
+  local content = f:read("*a")
+  f:close()
+
+  if #content < 0x10000 then return false, "Save inválido." end
+
+  backupSave(filepath)
+
+  local bytes = {}
+  for i = 1, #content do bytes[i] = string.byte(content, i) end
+
+  local secMap = findActiveSections(content)
+  local sec0Offset = secMap[0]
+  local sec1Offset = secMap[1]
+  local sec2Offset = secMap[2]
+
+  if not sec0Offset or not sec1Offset or not sec2Offset then
+    return false, "Estrutura do save não encontrada."
+  end
+
+  -- 1. All 8 Kanto Badges (0x820..0x827)
+  local badgeByte = sec1Offset + 0x0EE0 + math.floor(0x820 / 8) + 1
+  bytes[badgeByte] = 0xFF -- All 8 badges acquired!
+
+  -- 2. Hall of Fame Clear flag (0x82C) & National Dex Flag (0x829)
+  local clearByte = sec1Offset + 0x0EE0 + math.floor(0x82C / 8) + 1
+  bytes[clearByte] = (bytes[clearByte] or 0) % 32 < 16 and (bytes[clearByte] + 0x10) or bytes[clearByte]
+
+  -- 3. Enable Ferry & Sevii/Johto Access Flags (0x844, 0x845, 0x846)
+  local ferryByte = sec1Offset + 0x0EE0 + math.floor(0x844 / 8) + 1
+  bytes[ferryByte] = 0xFF
+
+  -- Recalculate Checksums
+  local chk0 = calculateChecksum(bytes, sec0Offset, 0)
+  writeUint16(bytes, sec0Offset + 0x0FF6 + 1, chk0)
+
+  local chk1 = calculateChecksum(bytes, sec1Offset, 1)
+  writeUint16(bytes, sec1Offset + 0x0FF6 + 1, chk1)
+
+  local chk2 = calculateChecksum(bytes, sec2Offset, 2)
+  writeUint16(bytes, sec2Offset + 0x0FF6 + 1, chk2)
+
+  local outStr = {}
+  for i = 1, #bytes do outStr[i] = string.char(bytes[i]) end
+
+  local wf = io.open(filepath, "wb")
+  if not wf then return false, "Erro ao gravar save." end
+  wf:write(table.concat(outStr))
+  wf:close()
+
+  -- Also inject National Dex & Rare Candies
+  GbaItemInjector.unlockNationalDex(filepath)
+  GbaItemInjector.injectItem(filepath, 0x0044, 99, "items") -- Rare Candies
+  GbaItemInjector.injectItem(filepath, 0x0001, 99, "balls") -- Master Balls
+  GbaItemInjector.injectMoney(filepath, 999999)
+
+  return true, "Status de Campeão de Kanto (8 Insígnias, Hall da Fama e Acesso a Johto) ativado com sucesso!"
 end
 
 return GbaItemInjector

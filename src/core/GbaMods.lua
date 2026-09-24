@@ -1,6 +1,6 @@
 local GbaMods = {}
 
-local CONFIG_FILE = "gba/mods/mods_config.json"
+local CONFIG_FILE = "mods/mods_config.json"
 local DEFAULT_MODS = {
   {
     id = "ptbr_firered",
@@ -60,15 +60,11 @@ local DEFAULT_MODS = {
 }
 
 local function getBaseDir()
-  local f = io.open("gba/mods/mods_config.json", "rb")
-  if f then f:close() return "gba/mods" end
-  local f2 = io.open("mods/mods_config.json", "rb")
-  if f2 then f2:close() return "mods" end
-  return "gba/mods"
+  return "mods"
 end
 
 local function getConfigPath()
-  return getBaseDir() .. "/mods_config.json"
+  return "mods/mods_config.json"
 end
 
 local function ensureDir(path)
@@ -96,10 +92,9 @@ local function writeFile(path, content)
 end
 
 function GbaMods.init()
-  ensureDir("gba/mods")
-  -- Create sample mod folders and manifest files if not exist
+  ensureDir("mods")
   for _, m in ipairs(DEFAULT_MODS) do
-    local modDir = "gba/mods/" .. m.id
+    local modDir = "mods/" .. m.id
     ensureDir(modDir)
     local manifestPath = modDir .. "/manifest.json"
     if not readFile(manifestPath) then
@@ -189,6 +184,44 @@ end
 function GbaMods.isEnabled(modId)
   if not GbaMods.enabledMap then GbaMods.loadConfig() end
   return GbaMods.enabledMap[modId] == true
+end
+
+function GbaMods.syncCheatsFile(romPath)
+  if not romPath then return end
+  local chtPath = romPath:gsub("%.%w+$", ".cht")
+  local cheats = {
+    "; Generated automatically by Pokemon GBA Studio++",
+    "",
+    "[Master Code (Obrigatorio)]",
+    "000014D1 000A",
+    "1003DAE6 0007",
+    ""
+  }
+
+  if GbaMods.isEnabled("run_indoors") then
+    table.insert(cheats, "[Correr em Qualquer Lugar (Indoors)]")
+    table.insert(cheats, "72025982 0200")
+    table.insert(cheats, "82025982 0000")
+    table.insert(cheats, "")
+  end
+
+  if GbaMods.isEnabled("fast_text_instant") then
+    table.insert(cheats, "[Texto Instantaneo]")
+    table.insert(cheats, "32003885 0000")
+    table.insert(cheats, "")
+  end
+
+  if GbaMods.isEnabled("reusable_tms") then
+    table.insert(cheats, "[TMs Reutilizaveis]")
+    table.insert(cheats, "82025840 0121")
+    table.insert(cheats, "")
+  end
+
+  local f = io.open(chtPath, "w")
+  if f then
+    f:write(table.concat(cheats, "\n"))
+    f:close()
+  end
 end
 
 return GbaMods

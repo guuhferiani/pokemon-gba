@@ -5,11 +5,27 @@
 *.zip
 *.7z
 *.rar
+roms/Mega Pack Hack Roms Pokémon/
 
-# Battery Save files (personal player saves)
+# Save and State files (personal player saves and save states)
 *.sav
 *.sa1
 *.sa2
+*.srm
+*.srm.bak
+*.ss*
+saves/*.sav
+saves/*.srm
+saves/*.srm.bak
+saves/manifest.json
+
+# Emulator cheats and temporary runtime files
+*.cheats
+roms/*.cheats
+roms/*.srm
+roms/*.ss*
+roms/*.cht
+!roms/FireRedDefinitivo.cht
 
 # Logs and crash dumps
 *.log

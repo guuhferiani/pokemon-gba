@@ -5,11 +5,5 @@
   "version": "1.1.0",
   "type": "script",
   "category": "Conveniência",
-  "description": "Permite segurar o botão B para correr dentro de casas, centros pokémon e cavernas.",
-  "games": [
-    "firered",
-    "leafgreen",
-    "emerald"
-  ],
-  "enabled": true
+  "description": "Permite segurar o botão B para correr dentro de casas, centros pokémon e cavernas."
 }

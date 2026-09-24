@@ -1,92 +1,92 @@
-﻿# 🎮 Pokémon GBA Recomp++ (Launcher & Mod Manager Gen 3)
+# Pokémon: Kanto & Johto Definitivo
 
-Interface moderna, launcher e gerenciador de mods e saves para **Game Boy Advance (GBA)**, inspirada na arquitetura do *gen1recomp*. Desenvolvida em **Lua + LÖVE 11.5**, com emulador portátil integrado (**mGBA 0.10.5**), renderização 3D de cartuchos e suporte nativo a múltiplos save slots e patches da comunidade.
+> **Unified GBA 32MB Engine, ROM Injection Suite & Desktop Management Hub**
 
----
-
-## ✨ Recursos
-
-- 🕹️ **Emulador Embutido Portátil:** Inclui o **mGBA v0.10.5** em modo portátil (`emulator/mGBA.exe`). Ao clicar em **JOGAR**, o jogo abre imediatamente sem diálogos do Windows.
-- 👾 **Cartucho GBA 3D Interativo:** Simulação tridimensional realista em perspectiva do cartucho clássico de GBA com rotação dinâmica interativa via mouse.
-- 💾 **Gerenciador de Múltiplos Save Slots:** Crie, renomeie, faça backup e alterne entre diferentes slots de salvamento independentes para cada jogo sem sobrescrever seu progresso principal.
-- 🧩 **Aba de Gerenciamento de Mods:**
-  - Interface dedicada para ativar e desativar mods, traduções e patches com um clique.
-  - Filtro por jogo (FireRed, LeafGreen, Emerald, etc.).
-  - Integração com o ecossistema e repositório da comunidade.
-- 🔍 **Detecção Automática de ROMs:** Varre a pasta raiz e analisa os headers de 32-bit ARM para identificar códigos oficiais (`BPRE`, `BPGE`, `BPEE`, `AXVE`, `AXPE`).
+[![GBA Engine](https://img.shields.io/badge/GBA-32MB%20ROM-red.svg)](https://github.com/guuhferiani/pokemon-gba)
+[![LÖVE](https://img.shields.io/badge/LÖVE-11.5-pink.svg)](https://love2d.org)
+[![Python Tools](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
+[![License: MIT](https://img.shields.io/badge/Original%20Code-MIT-green.svg)](LICENSE)
 
 ---
 
-## 📦 Jogos Suportados
+## 🧭 Visão Geral
 
-| Jogo | Código Oficial | Nome do Arquivo Recomendado |
-| :--- | :--- | :--- |
-| **Pokémon FireRed** | `BPRE` | `FireRed.gba` |
-| **Pokémon LeafGreen** | `BPGE` | `LeafGreen.gba` |
-| **Pokémon Emerald** | `BPEE` | `Emerald.gba` |
-| **Pokémon Ruby** | `AXVE` | `Ruby.gba` |
-| **Pokémon Sapphire** | `AXPE` | `Sapphire.gba` |
+O projeto **Pokémon: Kanto & Johto Definitivo** unifica duas das regiões mais icônicas da franquia em uma experiência contínua e desafiadora. O jogador inicia sua jornada em **Kanto**, conquista a Liga Índigo e viaja com sua equipe para desbravar **Johto** em alto nível (Lv 55–100), enfrentando líderes de ginásio redimensionados, novos mapas e o confronto definitivo no topo do Mt. Silver.
 
-> Coloque o arquivo `.gba` do seu jogo diretamente na pasta raiz do projeto.
+O ecossistema inclui um **Desktop Management Hub** desenvolvido em Lua/LÖVE com suporte a visualização de capas autênticas, sincronização automática de saves (.sav/.srm), gerenciador de mods e suíte de injeção binária em Python.
 
 ---
 
-## 🧩 Mods Inclusos
+## ⚡ Recursos & Arquitetura
 
-Na aba **🧩 MODS**, você pode ligar e desligar os seguintes mods pré-configurados:
-
-1. 🇧🇷 **Tradução PT-BR FireRed:** Textos e diálogos adaptados para o Português do Brasil.
-2. ⚡ **Exp. Share Moderno:** Distribuição de experiência estilo Gen 6+ para toda a equipe.
-3. 🏃 **Correr em Ambientes Fechados:** Permite correr livremente dentro de casas, centros pokémon e edifícios.
-4. ⏩ **Texto Instantâneo:** Elimina o delay na renderização das caixas de diálogo.
-5. 💿 **TMs Reutilizáveis:** Technical Machines não quebram após o uso (estilo Gen 5+).
-
-Para adicionar novos mods ou patches (`.ips`, `.bps`), basta colocá-los na pasta `mods/`.
+- **Jornada Contínua de 16 Insígnias:** Progressão direta Kanto ➔ Johto com curva de dificuldade adaptada para veteranos.
+- **Engine Binária Expandida (32MB):**
+  - Tabela estendida de 752 treinadores repontada em `0x09840000`.
+  - Novos bancos de mapas e encontros selvagens repontados em `0x09900000` e `0x09980000`.
+  - Script de transição no Porto de Vermilion (S.S. Aqua) em português com hook direto em NPCs.
+  - Tela de título personalizada com artes de Lugia e Charizard em alta fidelidade.
+- **Melhorias de Qualidade de Vida (QoL):**
+  - *Physical/Special Split* (Separação Físico/Especial Gen 4+).
+  - *Run Indoors* (Correr dentro de edificações e centros Pokémon).
+  - Remoção de travas de evolução por troca e desbloqueio da Pokédex Nacional.
+- **Desktop Hub & Ferramentas:**
+  - Carregador com visualizador de capa box art oficial.
+  - Leitor e sincronizador de saves em tempo real (Badges, Pokédex, Horas de jogo).
+  - Editor seguro de save com recálculo automático de checksums.
 
 ---
 
-## 🚀 Como Executar
+## 📂 Estrutura do Repositório
 
-### Pré-requisito
-- Ter o **LÖVE 11.5** instalado ([love2d.org](https://love2d.org)).
+```text
+├── assets/          # Capas e artes em alta resolução (Box Art GBA)
+├── docs/            # Especificações de design e arquitetura do projeto
+├── mods/            # Módulos e patches independentes (QoL, traduções)
+├── src/             # Código-fonte do Launcher Hub em Lua / LÖVE
+│   ├── core/        # Parsers de ROM, decodificadores de Save e injeção de dados
+│   ├── render/      # Shaders e pipeline gráfico
+│   └── ui/          # Interface gráfica, componentes e views
+├── tools/           # Suíte de engenharia reversa e injeção binária (Python)
+├── jogar.bat        # Atalho de inicialização rápida no Windows
+├── conf.lua         # Configurações de display e renderização
+└── main.lua         # Ponto de entrada do ecossistema
+```
 
-### Execução Direta
-Abra o terminal na pasta do projeto e execute:
+---
+
+## 🚀 Como Utilizar
+
+### 1. Iniciar o Launcher Desktop
+Certifique-se de possuir o [LÖVE 11.5+](https://love2d.org) instalado e execute:
+```powershell
+.\jogar.bat
+```
+*Ou alternativamente:*
 ```powershell
 love .
 ```
 
-Ou, se estiver na pasta pai dos seus projetos:
+### 2. Suíte de Testes Automatizados (CI)
+Para validar o carregamento dos módulos, integridade de componentes e lógica de saves:
 ```powershell
-love Pokemon-GBA
+lovec . --ci
+```
+
+### 3. Compilar a ROM Unificada (Ferramentas)
+Com sua ROM base colocada no diretório `roms/`, execute a suíte de injeção:
+```powershell
+python tools/kj_rom_engine.py
+python tools/patch_title_screen.py
 ```
 
 ---
 
-## 📂 Estrutura de Pastas
+## ⚖️ Aviso Legal & Direitos Autorais
 
-```
-Pokemon-GBA/
-├── conf.lua             # Configurações de janela (High-DPI, 980x660)
-├── main.lua             # Entrada principal do LÖVE
-├── src/
-│   ├── core/
-│   │   ├── GbaRom.lua   # Parser de headers ARM e varredura de ROMs
-│   │   ├── GbaSave.lua  # Gerenciador de saves 128KB Flash e slots
-│   │   └── GbaMods.lua  # Descoberta e alternância de mods
-│   └── ui/
-│       ├── Theme.lua    # Paleta Indigo escura e utilitários visuais
-│       ├── Kit.lua      # Botões interativos, badges e inputs
-│       ├── GbaCartView.lua # Cartucho 3D renderizado em tempo real
-│       └── LauncherView.lua # Painel principal e tela de mods
-├── emulator/            # mGBA 0.10.5 portátil pré-configurado
-├── mods/                # Pacotes de mods e mods_config.json
-├── saves/               # Backups e slots independentes de salvamento
-└── README.md
-```
+### Integridade e Marcas Registradas da Nintendo
+**Pokémon**, **Game Boy Advance**, nomes de personagens, insígnias, sprites e elementos temáticos associados são marcas registradas e propriedades intelectuais exclusivas da **Nintendo Co., Ltd.**, **Game Freak Inc.** e **Creatures Inc.**
 
----
+Este é um projeto não oficial, feito por fãs, estritamente **sem fins lucrativos**, com finalidade didática, de pesquisa em computação gráfica e preservação histórica de software. **Nenhuma ROM comercial ou arquivo protegido por direitos autorais proprietários é distribuído neste repositório.**
 
-## 📜 Licença
-
-Desenvolvido para preservação e estudo de engenharia reversa de ROMs e UI interativa de emuladores. Pokémon é marca registrada da Nintendo, Game Freak e Creatures Inc.
+### Direitos Autorais das Modificações
+Todo o código original de engenharia de software desenvolvido para este projeto — incluindo a arquitetura do Launcher Desktop (`src/`), a suíte de ferramentas de injeção binária (`tools/`), os parsers e algoritmos de recálculo de checksums, documentações e utilitários — é de autoria e propriedade de **Gustavo Feriani** e colaboradores do projeto, disponibilizado sob os termos da licença [MIT](LICENSE).

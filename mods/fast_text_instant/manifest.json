@@ -5,13 +5,5 @@
   "version": "2.0.0",
   "type": "script",
   "category": "Velocidade",
-  "description": "Exibe caixas de diálogo e mensagens de batalha instantaneamente sem delay.",
-  "games": [
-    "firered",
-    "leafgreen",
-    "emerald",
-    "ruby",
-    "sapphire"
-  ],
-  "enabled": false
+  "description": "Exibe caixas de diálogo e mensagens de batalha instantaneamente sem delay."
 }

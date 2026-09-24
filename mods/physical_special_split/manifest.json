@@ -1,0 +1,9 @@
+{
+  "id": "physical_special_split",
+  "name": "Separação Físico/Especial (Gen 4+)",
+  "author": "Engine Definitiva",
+  "version": "2.0.0",
+  "type": "rom_patch",
+  "category": "Batalha",
+  "description": "Golpes categorizados individualmente por Físico, Especial e Status independente do Tipo (ex: Shadow Ball Especial, Waterfall Físico)."
+}

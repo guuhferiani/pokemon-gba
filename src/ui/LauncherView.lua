@@ -3,12 +3,35 @@ local Kit = require("src.ui.Kit")
 local GbaRom = require("src.core.GbaRom")
 local GbaSave = require("src.core.GbaSave")
 local GbaMods = require("src.core.GbaMods")
-local GbaCartView = require("src.ui.GbaCartView")
+local GameCoverView = require("src.ui.GameCoverView")
 local GbaItemInjector = require("src.core.GbaItemInjector")
 local GbaShinyDex = require("src.core.GbaShinyDex")
+local utf8 = require("utf8")
+
+local function utf8Truncate(str, maxChars)
+  if not str then return "" end
+  local len = utf8.len(str)
+  if len and len > maxChars then
+    local offset = utf8.offset(str, maxChars + 1)
+    if offset then
+      return string.sub(str, 1, offset - 1) .. "..."
+    end
+  end
+  return str
+end
+
+local function utf8PopChar(s)
+  if not s or s == "" then return "" end
+  local byteoffset = utf8.offset(s, -1)
+  if byteoffset then
+    return string.sub(s, 1, byteoffset - 1)
+  else
+    return string.sub(s, 1, #s - 1)
+  end
+end
 
 local LauncherView = {
-  activeGameId = "firered",
+  activeGameId = "kantojohto",
   mainView = "game", -- "game" | "mods" | "items" | "shiny"
   modsFilter = nil,
   itemsCategory = "all",
@@ -52,8 +75,68 @@ function LauncherView.getActiveRom()
   return LauncherView.discoveredRoms[LauncherView.activeGameId]
 end
 
+function LauncherView.resolveActiveSavePath()
+  -- 1. Check active slot save in saves/
+  local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+  local fSlot = io.open(slotPath, "rb")
+  if fSlot then
+    fSlot:close()
+    return slotPath
+  end
+
+  -- 2. Check active ROM companion .sav
+  local activeRom = LauncherView.getActiveRom()
+  if activeRom and activeRom.displayPath then
+    local compSav = activeRom.displayPath:gsub("%.%w+$", ".sav")
+    local fComp = io.open(compSav, "rb")
+    if fComp then
+      fComp:close()
+      return compSav
+    end
+  end
+
+  -- 3. Check fallbacks
+  local fallbacks = {
+    "roms/" .. (activeRom and activeRom.filename and activeRom.filename:gsub("%.%w+$", ".sav") or "FireRedDefinitivo.sav"),
+    "FireRed.sav",
+    "roms/FireRedDefinitivo.sav",
+    "roms/FireRed_251+final.sav",
+    "roms/FireRed.sav"
+  }
+  for _, fp in ipairs(fallbacks) do
+    local f = io.open(fp, "rb")
+    if f then
+      f:close()
+      return fp
+    end
+  end
+
+  return slotPath
+end
+
+function LauncherView.onFocus(focused)
+  if focused then
+    if GbaSave and GbaSave.syncSaveWithEmulator then
+      if GbaSave.syncSaveWithEmulator(LauncherView.activeGameId) then
+        LauncherView.refreshSlots()
+      end
+    end
+  end
+end
+
 function LauncherView.update(dt)
   Kit.update(dt)
+
+  -- Throttled Auto-Sync of emulator save file (every 1.5 seconds)
+  LauncherView.saveSyncTimer = (LauncherView.saveSyncTimer or 0) + dt
+  if LauncherView.saveSyncTimer >= 1.5 then
+    LauncherView.saveSyncTimer = 0
+    if GbaSave and GbaSave.syncSaveWithEmulator then
+      if GbaSave.syncSaveWithEmulator(LauncherView.activeGameId) then
+        LauncherView.refreshSlots()
+      end
+    end
+  end
 
   if LauncherView.toastTimer > 0 then
     LauncherView.toastTimer = LauncherView.toastTimer - dt
@@ -65,7 +148,7 @@ function LauncherView.update(dt)
   local ww = love.graphics.getWidth()
   local wh = love.graphics.getHeight()
   local leftW = math.floor(ww * 0.44)
-  GbaCartView.update(dt, 24, 110, leftW, 280)
+  GameCoverView.update(dt, 24, 110, leftW, 260)
 end
 
 function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
@@ -77,7 +160,7 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   local rightX = pad + leftW + gap
   local rightW = ww - pad - rightX
 
-  -- Left Column: Game Title & Cartridge
+  -- Left Column: Game Title & Box Art
   Theme.setFont("header")
   Theme.col(Theme.PAL.white, 1)
   love.graphics.print(game.name, pad, contentY)
@@ -85,19 +168,20 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   local romReady = (rom ~= nil)
   local pillLabel = romReady and "ROM PRONTA" or "ROM NÃO ENCONTRADA"
   local pillBg = romReady and { 25, 135, 65 } or { 140, 100, 20 }
-  Kit.pill(pillLabel, pad + 210, contentY + 2, {
+  local titleW = love.graphics.getFont():getWidth(game.name)
+  Kit.pill(pillLabel, pad + titleW + 14, contentY + 2, {
     bg = pillBg,
     color = Theme.PAL.white,
     font = "micro"
   })
 
-  -- 3D GBA Cartridge
+  -- Authentic GBA Dual Cover Art (Charizard & Lugia)
   local cartAreaH = 260
-  GbaCartView.draw(pad, contentY + 28, leftW, cartAreaH, game)
+  GameCoverView.draw(pad, contentY + 28, leftW, cartAreaH, game)
 
   -- Play & Cart Buttons
   local btnY = contentY + 28 + cartAreaH + 10
-  local playText = romReady and ("JOGAR " .. game.name:upper()) or "ROMS DISPONÍVEIS NA PASTA"
+  local playText = romReady and ("JOGAR " .. game.name:upper()) or ("ROM " .. (game.defaultRomName or "GBA") .. " NÃO ENCONTRADA")
   local playW = romReady and (leftW - 130) or leftW
   if Kit.button("btn_play", playText, pad, btnY, playW, 40, {
     kind = romReady and "primary" or "neutral",
@@ -105,66 +189,48 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
     disabled = not romReady,
     font = "body"
   }) then
-    local romPath = nil
-    local candidates = {
-      rom and rom.filepath,
-      rom and rom.displayPath,
-      "roms/FireRedDefinitivo.gba",
-      "roms/Fire Red(BR-USA).gba",
-      "FireRed.gba"
-    }
-    for _, cp in ipairs(candidates) do
-      if cp then
-        local f = io.open(cp, "rb")
-        if f then f:close() romPath = cp break end
+    local romPath = rom and (rom.displayPath or rom.filepath)
+    if romPath then
+      GbaSave.setActiveSlot(LauncherView.activeGameId, LauncherView.activeSlotId, romPath)
+      if GbaMods and GbaMods.syncCheatsFile then
+        GbaMods.syncCheatsFile(romPath)
       end
-    end
-    if not romPath then
-      romPath = "roms/FireRedDefinitivo.gba"
-    end
+      LauncherView.showToast("Slot " .. LauncherView.activeSlotId .. " ativado! Iniciando " .. game.name .. "...")
 
-    GbaSave.setActiveSlot(LauncherView.activeGameId, LauncherView.activeSlotId, romPath)
-    LauncherView.showToast("Slot " .. LauncherView.activeSlotId .. " ativado para " .. romPath .. "!")
+      -- Check if portable emulator is available
+      local emuPaths = {
+        "emulator/mGBA.exe",
+        "gba/emulator/mGBA.exe",
+        "emulator/mgba-sdl.exe",
+        "tools/mgba/mgba.exe"
+      }
+      local emuFound = nil
+      for _, ep in ipairs(emuPaths) do
+        local f = io.open(ep, "rb")
+        if f then f:close() emuFound = ep break end
+      end
 
-    -- Check if portable emulator is available
-    local emuPaths = {
-      "gba/emulator/mGBA.exe",
-      "gba/emulator/mgba.exe",
-      "emulator/mGBA.exe",
-      "emulator/mgba.exe",
-      "../emulator/mGBA.exe",
-      "tools/mgba/mgba.exe"
-    }
-    local emuFound = nil
-    for _, ep in ipairs(emuPaths) do
-      local f = io.open(ep, "rb")
-      if f then f:close() emuFound = ep break end
-    end
-
-    if emuFound then
-      local winEmu = emuFound:gsub('/', '\\')
-      local winRom = romPath:gsub('/', '\\')
-      os.execute('start "" "' .. winEmu .. '" "' .. winRom .. '"')
-      LauncherView.showToast("Iniciando no mGBA integrado...")
-    else
-      local absPath = love.filesystem.getRealDirectory and love.filesystem.getRealDirectory(romPath)
-      if absPath then
-        os.execute('start "" "' .. absPath .. '/' .. romPath .. '"')
+      if emuFound then
+        local winEmu = emuFound:gsub('/', '\\')
+        local winRom = romPath:gsub('/', '\\')
+        os.execute('start "" "' .. winEmu .. '" "' .. winRom .. '"')
+        LauncherView.showToast("Iniciando no mGBA integrado...")
       else
-        os.execute('start "" "' .. romPath .. '"')
+        local winRom = romPath:gsub('/', '\\')
+        os.execute('start "" "' .. winRom .. '"')
       end
+    else
+      LauncherView.showToast("Coloque a ROM " .. (game.defaultRomName or "") .. " na pasta roms/ para jogar!")
     end
   end
 
   if romReady then
-    if Kit.button("btn_hma_game", "🛠️ MOD HMA", pad + playW + 8, btnY, 122, 40, {
+    if Kit.button("btn_mods_folder", "MODS", pad + playW + 8, btnY, 122, 40, {
       kind = "accent",
       font = "small"
     }) then
-      local hmaExe = "tools/HexManiacAdvance/HexManiacAdvance.exe"
-      local romPath = (rom and rom.displayPath) or "roms/FireRedDefinitivo.gba"
-      os.execute('start "" "' .. hmaExe:gsub('/', '\\') .. '" "' .. romPath:gsub('/', '\\') .. '"')
-      LauncherView.showToast("Abrindo Hex Maniac Advance com " .. romPath .. "...")
+      love.system.openURL("file://" .. love.filesystem.getWorkingDirectory() .. "/mods")
+      LauncherView.showToast("Pasta mods/ aberta no Explorer!")
     end
   end
 
@@ -188,30 +254,34 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   local romTitle = rom and rom.title or "Nenhuma ROM carregada"
   local romCode = rom and rom.gameCode or "----"
   local romSize = rom and rom.fileSizeMb or "--"
-  local folder = rom and (rom.folder or "/gba") or "/gba"
-  local displayPath = rom and (rom.displayPath or ("gba/" .. game.defaultRomName)) or ("gba/" .. game.defaultRomName)
+  local folder = rom and (rom.folder or "roms/") or "roms/"
+  local displayPath = rom and (rom.displayPath or ("roms/" .. game.defaultRomName)) or ("roms/" .. game.defaultRomName)
 
   love.graphics.print("Pasta: " .. folder .. "  •  Arquivo: " .. (rom and rom.filename or (game.defaultRomName)), pad + 16, infoCardY + 36)
   Theme.setFont("small")
   Theme.col(Theme.PAL.textMuted, 1)
   love.graphics.print("Caminho: " .. displayPath, pad + 16, infoCardY + 60)
   love.graphics.print("Código: " .. romCode .. "  •  Tamanho: " .. romSize .. "  •  GBA 32-bit ARM", pad + 16, infoCardY + 80)
-  love.graphics.print("Status: " .. (romReady and "Pronto para jogar via mGBA" or "Coloque a ROM na pasta /gba"), pad + 16, infoCardY + 100)
+  love.graphics.print("Status: " .. (romReady and "Pronto para jogar via mGBA" or "Coloque a ROM na pasta roms/"), pad + 16, infoCardY + 100)
 
   -- -------------------------------------------------------------
-  -- RIGHT COLUMN: SAVE SLOTS MANAGER
+  -- -------------------------------------------------------------
+  -- RIGHT COLUMN: KANTO & JOHTO CAMPAIGN & SAVE PROGRESS
   -- -------------------------------------------------------------
   local slotsCardH = wh - contentY - 60
   Theme.card(rightX, contentY, rightW, slotsCardH)
 
   Theme.setFont("header")
   Theme.col(Theme.PAL.white, 1)
-  love.graphics.print("SAVE SLOTS", rightX + 20, contentY + 18)
+  love.graphics.print("STATUS DA JORNADA", rightX + 20, contentY + 18)
 
-  local slotCount = #LauncherView.slots
-  Kit.pill(slotCount .. " slots", rightX + 150, contentY + 22, { font = "micro" })
+  Kit.pill("KANTO ➔ JOHTO", rightX + 225, contentY + 22, {
+    bg = { 180, 130, 20 },
+    color = Theme.PAL.white,
+    font = "micro"
+  })
 
-  if Kit.button("btn_import_save", "+ Importar Save (.sav)", rightX + rightW - 170, contentY + 16, 150, 30, {
+  if Kit.button("btn_import_save", "+ Importar .sav", rightX + rightW - 145, contentY + 16, 125, 30, {
     kind = "accent",
     font = "small"
   }) then
@@ -219,10 +289,10 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
     LauncherView.showToast("Coloque o seu arquivo .sav na pasta de saves aberta!")
   end
 
-  -- Active Hero Slot Card
-  local heroY = contentY + 62
+  -- Active Trainer Hero Card (Real Save Data)
+  local heroY = contentY + 58
   local heroW = rightW - 40
-  local heroH = 110
+  local heroH = 100
   local heroX = rightX + 20
 
   local activeSlot = nil
@@ -235,12 +305,12 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   Theme.col(game.color or Theme.PAL.gbaPurple, 0.8)
   Theme.roundRect(heroX, heroY, heroW, heroH, 8, "line")
 
-  local trainerName = activeSlot and activeSlot.name or "ASH"
+  local trainerName = (activeSlot and activeSlot.name) or "GU"
   Theme.setFont("header")
   Theme.col(Theme.PAL.white, 1)
-  love.graphics.print(trainerName, heroX + 18, heroY + 16)
+  love.graphics.print(trainerName, heroX + 18, heroY + 14)
 
-  Kit.pill("LOADED", heroX + heroW - 85, heroY + 16, {
+  Kit.pill("SAVE ATIVO", heroX + heroW - 105, heroY + 14, {
     bg = { 20, 140, 60 },
     color = Theme.PAL.white,
     font = "micro"
@@ -248,37 +318,142 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
 
   Theme.setFont("small")
   Theme.col(Theme.PAL.textMuted, 1)
-  local stats = "4 insígnias  •  Tempo: " .. (activeSlot and activeSlot.playTime or "33:30") .. "  •  59 capturados"
-  love.graphics.print(stats, heroX + 18, heroY + 44)
+  local playTime = (activeSlot and activeSlot.playTime) or "00:00"
+  local caughtCount = (activeSlot and activeSlot.caught) or 0
+  local stats = "Tempo de Jogo: " .. playTime .. "  •  Pokédex: " .. caughtCount .. " capturados"
+  love.graphics.print(stats, heroX + 18, heroY + 40)
 
-  local actBtnY = heroY + 70
+  local actBtnY = heroY + 64
   local actBtnW = 75
   local actBtnH = 26
 
   if Kit.button("act_export", "Exportar", heroX + heroW - 255, actBtnY, actBtnW, actBtnH, { kind = "accent", font = "small" }) then
-    LauncherView.showToast("Save exportado para saves/" .. game.id .. "_" .. activeSlot.id .. ".sav")
+    LauncherView.showToast("Save exportado para saves/" .. game.id .. "_" .. (activeSlot and activeSlot.id or "slot1") .. ".sav")
   end
 
   if Kit.button("act_rename", "Renomear", heroX + heroW - 170, actBtnY, actBtnW, actBtnH, { font = "small" }) then
-    LauncherView.modal = { type = "rename", slotId = activeSlot.id, text = activeSlot.name }
+    if activeSlot then
+      LauncherView.modal = { type = "rename", slotId = activeSlot.id, text = activeSlot.name }
+    end
   end
 
   if Kit.button("act_delete", "Excluir", heroX + heroW - 85, actBtnY, actBtnW, actBtnH, { kind = "danger", font = "small" }) then
-    GbaSave.deleteSlot(game.id, activeSlot.id)
-    LauncherView.refreshSlots()
-    LauncherView.showToast("Slot excluído.")
+    if activeSlot then
+      GbaSave.deleteSlot(game.id, activeSlot.id)
+      LauncherView.refreshSlots()
+      LauncherView.showToast("Slot excluído.")
+    end
   end
 
-  -- Other slots list
-  local listY = heroY + heroH + 16
+  -- -------------------------------------------------------------
+  -- PROGRESSION CARD: KANTO & JOHTO LEAGUES
+  -- -------------------------------------------------------------
+  local progY = heroY + heroH + 14
+  local progH = 145
+  Theme.col(Theme.PAL.cardHeader, 0.7)
+  Theme.roundRect(heroX, progY, heroW, progH, 8, "fill")
+  Theme.col(Theme.PAL.cardBorder, 0.6)
+  Theme.roundRect(heroX, progY, heroW, progH, 8, "line")
+
+  -- Kanto Badges Section
+  Theme.setFont("body")
+  Theme.col(Theme.PAL.white, 1)
+  local kBadges = (activeSlot and activeSlot.kantoBadges) or 0
+  love.graphics.print("Região 1: Kanto (Gen 1)", heroX + 16, progY + 12)
+  Kit.pill(kBadges .. " / 8 Insígnias", heroX + heroW - 115, progY + 12, {
+    bg = kBadges == 8 and { 20, 140, 60 } or { 50, 60, 75 },
+    color = Theme.PAL.white,
+    font = "micro"
+  })
+
+  -- Draw 8 Kanto Badge circles
+  local kantoColors = {
+    { 160, 160, 160 }, -- Pewter (Stone)
+    { 60, 140, 240 },  -- Cerulean (Cascade)
+    { 240, 200, 30 },  -- Vermilion (Thunder)
+    { 50, 190, 80 },   -- Celadon (Rainbow)
+    { 230, 80, 150 },  -- Fuchsia (Soul)
+    { 230, 160, 40 },  -- Saffron (Marsh)
+    { 230, 60, 40 },   -- Cinnabar (Volcano)
+    { 40, 120, 60 }    -- Viridian (Earth)
+  }
+  local bx = heroX + 16
+  local by = progY + 38
+  for bIdx = 1, 8 do
+    local hasBadge = (kBadges >= bIdx)
+    local bCol = kantoColors[bIdx]
+    if hasBadge then
+      love.graphics.setColor(bCol[1]/255, bCol[2]/255, bCol[3]/255, 1)
+      love.graphics.circle("fill", bx + 12, by + 10, 8)
+    else
+      love.graphics.setColor(0.3, 0.35, 0.4, 0.6)
+      love.graphics.circle("line", bx + 12, by + 10, 8)
+    end
+    bx = bx + 28
+  end
+
+  -- Johto Badges Section
+  local jProgY = progY + 70
+  Theme.col(Theme.PAL.cardBorder, 0.4)
+  love.graphics.line(heroX + 16, jProgY, heroX + heroW - 16, jProgY)
+
+  Theme.setFont("body")
+  Theme.col(Theme.PAL.white, 1)
+  local jBadges = (activeSlot and activeSlot.johtoBadges) or 0
+  love.graphics.print("Região 2: Johto (Níveis 58 a 87)", heroX + 16, jProgY + 12)
+  Kit.pill(jBadges .. " / 8 Insígnias", heroX + heroW - 115, jProgY + 12, {
+    bg = jBadges == 8 and { 20, 140, 60 } or { 80, 60, 20 },
+    color = Theme.PAL.white,
+    font = "micro"
+  })
+
+  local johtoColors = {
+    { 140, 180, 230 }, -- Zephyr
+    { 140, 200, 70 },  -- Hive
+    { 240, 140, 180 }, -- Plain
+    { 130, 90, 180 },  -- Fog
+    { 180, 110, 60 },  -- Storm
+    { 180, 190, 200 }, -- Mineral
+    { 100, 220, 230 }, -- Glacier
+    { 80, 80, 210 }    -- Rising
+  }
+  bx = heroX + 16
+  by = jProgY + 38
+  for bIdx = 1, 8 do
+    local hasBadge = (jBadges >= bIdx)
+    local bCol = johtoColors[bIdx]
+    if hasBadge then
+      love.graphics.setColor(bCol[1]/255, bCol[2]/255, bCol[3]/255, 1)
+      love.graphics.circle("fill", bx + 12, by + 10, 8)
+    else
+      love.graphics.setColor(0.3, 0.35, 0.4, 0.6)
+      love.graphics.circle("line", bx + 12, by + 10, 8)
+    end
+    bx = bx + 28
+  end
+
+  -- Quick shortcut button to unlock Johto directly from the main dashboard
+  if Kit.button("btn_side_unlock_johto", "Liberar Johto", heroX + heroW - 130, jProgY + 34, 115, 26, {
+    kind = "accent",
+    font = "micro"
+  }) then
+    LauncherView.unlockKantoChampAndJohto()
+  end
+
+  -- -------------------------------------------------------------
+  -- SLOTS LIST & NEW SLOT
+  -- -------------------------------------------------------------
+  local listY = progY + progH + 14
   Theme.setFont("small")
   Theme.col(Theme.PAL.textMuted, 1)
-  love.graphics.print("OUTROS SLOTS DISPONÍVEIS", heroX, listY)
+  love.graphics.print("GERENCIADOR DE SLOTS", heroX, listY)
   listY = listY + 22
 
+  local remainingSlots = 0
   for _, s in ipairs(LauncherView.slots) do
-    if s.id ~= LauncherView.activeSlotId then
-      local rowH = 46
+    if s.id ~= LauncherView.activeSlotId and remainingSlots < 3 then
+      remainingSlots = remainingSlots + 1
+      local rowH = 40
       local hover = Kit.inRect(heroX, listY, heroW, rowH)
       Theme.col(hover and Theme.PAL.rowHover or Theme.PAL.rowBg, 0.8)
       Theme.roundRect(heroX, listY, heroW, rowH, 6, "fill")
@@ -287,24 +462,24 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
 
       Theme.setFont("body")
       Theme.col(Theme.PAL.text, 1)
-      love.graphics.print(s.name, heroX + 16, listY + 8)
+      love.graphics.print(s.name, heroX + 16, listY + 6)
 
       Theme.setFont("micro")
       Theme.col(Theme.PAL.textMuted, 1)
-      love.graphics.print("Tempo: " .. s.playTime, heroX + 16, listY + 28)
+      love.graphics.print("Tempo: " .. (s.playTime or "00:00"), heroX + 16, listY + 23)
 
-      if Kit.button("load_" .. s.id, "Carregar", heroX + heroW - 85, listY + 10, 75, 26, { font = "small" }) then
+      if Kit.button("load_" .. s.id, "Carregar", heroX + heroW - 85, listY + 7, 75, 26, { font = "small" }) then
         GbaSave.setActiveSlot(game.id, s.id, rom and rom.filepath)
         LauncherView.refreshSlots()
         LauncherView.showToast("Slot " .. s.name .. " ativado!")
       end
 
-      listY = listY + rowH + 8
+      listY = listY + rowH + 6
     end
   end
 
   -- + New Save Slot Button
-  local newSlotBtnY = slotsCardH + contentY - 50
+  local newSlotBtnY = slotsCardH + contentY - 48
   if Kit.button("btn_new_slot", "+ Novo Save Slot", heroX, newSlotBtnY, heroW, 36, { kind = "primary", font = "body" }) then
     local nextIndex = #LauncherView.slots + 1
     LauncherView.modal = { type = "new_slot", text = "Slot " .. nextIndex }
@@ -329,12 +504,12 @@ function LauncherView.drawModsPanel(ww, wh, headerH)
   love.graphics.print("Ative ou desative traduções, mecânicas QoL, patches e scripts para os jogos da Gen 3.", pad + 24, contentY + 48)
 
   local btnW = 160
-  if Kit.button("btn_open_mods_dir", "📂 Pasta gba/mods/", pad + contentW - btnW * 2 - 34, contentY + 18, btnW, 32, { kind = "accent", font = "small" }) then
-    love.system.openURL("file://" .. love.filesystem.getWorkingDirectory() .. "/gba/mods")
-    LauncherView.showToast("Pasta gba/mods aberta!")
+  if Kit.button("btn_open_mods_dir", "Pasta mods/", pad + contentW - btnW * 2 - 34, contentY + 18, btnW, 32, { kind = "accent", font = "small" }) then
+    love.system.openURL("file://" .. love.filesystem.getWorkingDirectory() .. "/mods")
+    LauncherView.showToast("Pasta mods/ aberta no Explorer!")
   end
 
-  if Kit.button("btn_online_mods", "🌐 Índice da Comunidade", pad + contentW - btnW - 20, contentY + 18, btnW, 32, { kind = "primary", font = "small" }) then
+  if Kit.button("btn_online_mods", "Índice da Comunidade", pad + contentW - btnW - 20, contentY + 18, btnW, 32, { kind = "primary", font = "small" }) then
     love.system.openURL("https://bryanthaboi.github.io/gen1recomp-mod-index/")
     LauncherView.showToast("Abrindo https://bryanthaboi.github.io/gen1recomp-mod-index/...")
   end
@@ -391,7 +566,7 @@ function LauncherView.drawModsPanel(ww, wh, headerH)
     local tBtnX = rx + rowW - tBtnW - 16
     local tBtnY = listY + (rowH - tBtnH) / 2
     local tKind = m.enabled and "primary" or "neutral"
-    local tText = m.enabled and "✔ ATIVO" or "DESATIVADO"
+    local tText = m.enabled and "ATIVO" or "DESATIVADO"
 
     if Kit.button("toggle_" .. m.id, tText, tBtnX, tBtnY, tBtnW, tBtnH, {
       kind = tKind,
@@ -431,50 +606,47 @@ function LauncherView.drawModsPanel(ww, wh, headerH)
   love.graphics.print("💡 Dica: Novos patches (.ips, .bps) e mods colocados em gba/mods/ são reconhecidos e listados automaticamente.", pad + 24, contentH + contentY - 24)
 end
 
+function LauncherView.syncSaveData(primarySave, data)
+  if not data then return end
+  
+  if love and love.filesystem then
+    love.filesystem.createDirectory(GbaSave.getSaveDir())
+  else
+    os.execute('mkdir "' .. GbaSave.getSaveDir() .. '" 2>nul')
+  end
+
+  local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
+  local fSlot = io.open(slotPath, "wb")
+  if fSlot then fSlot:write(data) fSlot:close() end
+
+  local activeRom = LauncherView.getActiveRom()
+  if activeRom and activeRom.displayPath then
+    local compSav = activeRom.displayPath:gsub("%.%w+$", ".sav")
+    if compSav ~= primarySave and compSav ~= slotPath then
+      local fComp = io.open(compSav, "wb")
+      if fComp then fComp:write(data) fComp:close() end
+    end
+  end
+
+  if primarySave and primarySave ~= slotPath then
+    local fPri = io.open(primarySave, "wb")
+    if fPri then fPri:write(data) fPri:close() end
+  end
+end
+
 function LauncherView.injectItem(itemId, quantity, pocket)
   quantity = quantity or LauncherView.selectedQuantity or 99
-  local activeRom = LauncherView.getActiveRom()
-  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
-  
-  local f = io.open(primarySave, "rb")
-  if not f then
-    local fallbackPaths = { "roms/FireRedDefinitivo.sav", "FireRed.sav", "roms/FireRed_251+final.sav" }
-    for _, fp in ipairs(fallbackPaths) do
-      local fTest = io.open(fp, "rb")
-      if fTest then
-        fTest:close()
-        primarySave = fp
-        break
-      end
-    end
-  else
-    f:close()
-  end
+  local primarySave = LauncherView.resolveActiveSavePath()
 
   local ok, msg = GbaItemInjector.injectItem(primarySave, itemId, quantity, pocket)
   if ok then
-    -- Sync updated save to saves/ folder and other active copies
     local fRead = io.open(primarySave, "rb")
     if fRead then
       local data = fRead:read("*a")
       fRead:close()
-      
-      if love and love.filesystem then
-        love.filesystem.createDirectory(GbaSave.getSaveDir())
-      else
-        os.execute('mkdir "' .. GbaSave.getSaveDir() .. '" 2>nul')
-      end
-
-      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-      local fSlot = io.open(slotPath, "wb")
-      if fSlot then fSlot:write(data) fSlot:close() end
-      
-      if primarySave ~= "roms/FireRedDefinitivo.sav" then
-        local fDef = io.open("roms/FireRedDefinitivo.sav", "wb")
-        if fDef then fDef:write(data) fDef:close() end
-      end
+      LauncherView.syncSaveData(primarySave, data)
     end
-    LauncherView.showToast("✨ " .. tostring(msg))
+    LauncherView.showToast(tostring(msg))
   else
     LauncherView.showToast(tostring(msg or "Erro ao injetar item."))
   end
@@ -483,19 +655,7 @@ end
 
 function LauncherView.injectMoney(amount)
   amount = amount or 500000
-  local activeRom = LauncherView.getActiveRom()
-  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
-  
-  local f = io.open(primarySave, "rb")
-  if not f then
-    local fallbackPaths = { "roms/FireRedDefinitivo.sav", "FireRed.sav", "roms/FireRed_251+final.sav" }
-    for _, fp in ipairs(fallbackPaths) do
-      local fTest = io.open(fp, "rb")
-      if fTest then fTest:close() primarySave = fp break end
-    end
-  else
-    f:close()
-  end
+  local primarySave = LauncherView.resolveActiveSavePath()
 
   local ok, msg = GbaItemInjector.injectMoney(primarySave, amount)
   if ok then
@@ -503,11 +663,9 @@ function LauncherView.injectMoney(amount)
     if fRead then
       local data = fRead:read("*a")
       fRead:close()
-      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-      local fSlot = io.open(slotPath, "wb")
-      if fSlot then fSlot:write(data) fSlot:close() end
+      LauncherView.syncSaveData(primarySave, data)
     end
-    LauncherView.showToast("💰 " .. tostring(msg))
+    LauncherView.showToast(tostring(msg))
   else
     LauncherView.showToast(tostring(msg or "Erro ao adicionar dinheiro."))
   end
@@ -515,22 +673,36 @@ function LauncherView.injectMoney(amount)
 end
 
 function LauncherView.unlockNationalDex()
-  local activeRom = LauncherView.getActiveRom()
-  local primarySave = (activeRom and activeRom.displayPath and activeRom.displayPath:gsub("%.%w+$", ".sav")) or "roms/FireRedDefinitivo.sav"
-  
+  local primarySave = LauncherView.resolveActiveSavePath()
+
   local ok, msg = GbaItemInjector.unlockNationalDex(primarySave)
   if ok then
     local fRead = io.open(primarySave, "rb")
     if fRead then
       local data = fRead:read("*a")
       fRead:close()
-      local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-      local fSlot = io.open(slotPath, "wb")
-      if fSlot then fSlot:write(data) fSlot:close() end
+      LauncherView.syncSaveData(primarySave, data)
     end
-    LauncherView.showToast("📖 Pokédex Nacional (251 Pokémon) desbloqueada!")
+    LauncherView.showToast("Pokédex Nacional desbloqueada com sucesso!")
   else
     LauncherView.showToast(tostring(msg or "Erro ao desbloquear National Dex."))
+  end
+  LauncherView.refreshSlots()
+end
+
+function LauncherView.unlockKantoChampAndJohto()
+  local primarySave = LauncherView.resolveActiveSavePath()
+  local ok, msg = GbaItemInjector.unlockKantoChampAndJohto(primarySave)
+  if ok then
+    local fRead = io.open(primarySave, "rb")
+    if fRead then
+      local data = fRead:read("*a")
+      fRead:close()
+      LauncherView.syncSaveData(primarySave, data)
+    end
+    LauncherView.showToast("Kanto concluído! 8 Insígnias, Hall da Fama e Johto liberados!")
+  else
+    LauncherView.showToast(tostring(msg or "Erro ao desbloquear."))
   end
   LauncherView.refreshSlots()
 end
@@ -556,27 +728,27 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
   local qy = contentY + 68
   Theme.setFont("micro")
   Theme.col(Theme.PAL.textDim, 1)
-  love.graphics.print("AÇÕES RÁPIDAS (1-CLIQUE):", pad + 24, qy + 5)
+  love.graphics.print("AÇÕES RÁPIDAS:", pad + 24, qy + 5)
 
-  local qx = pad + 180
-  if Kit.button("btn_q_candy", "🍬 +99 Doces", qx, qy, 110, 26, { kind = "accent", font = "micro" }) then
+  local qx = pad + 130
+  if Kit.button("btn_q_candy", "+99 Doces", qx, qy, 90, 26, { kind = "accent", font = "micro" }) then
     LauncherView.injectItem(0x0044, 99, "items")
   end
-  qx = qx + 118
-  if Kit.button("btn_q_mball", "🔴 +99 Master", qx, qy, 115, 26, { kind = "primary", font = "micro" }) then
+  qx = qx + 96
+  if Kit.button("btn_q_mball", "+99 Master", qx, qy, 95, 26, { kind = "primary", font = "micro" }) then
     LauncherView.injectItem(0x0001, 99, "balls")
   end
-  qx = qx + 123
-  if Kit.button("btn_q_egg", "🥚 +5 Ovos XP", qx, qy, 110, 26, { kind = "accent", font = "micro" }) then
-    LauncherView.injectItem(0x00C3, 5, "items")
-  end
-  qx = qx + 118
-  if Kit.button("btn_q_money", "💰 +$500.000", qx, qy, 110, 26, { kind = "primary", font = "micro" }) then
+  qx = qx + 101
+  if Kit.button("btn_q_money", "+$500.000", qx, qy, 90, 26, { kind = "primary", font = "micro" }) then
     LauncherView.injectMoney(500000)
   end
-  qx = qx + 118
-  if Kit.button("btn_q_natdex", "📖 National Dex (251)", qx, qy, 150, 26, { kind = "accent", font = "micro" }) then
+  qx = qx + 96
+  if Kit.button("btn_q_natdex", "Liberar Dex (386)", qx, qy, 125, 26, { kind = "accent", font = "micro" }) then
     LauncherView.unlockNationalDex()
+  end
+  qx = qx + 131
+  if Kit.button("btn_q_champ_johto", "Liberar Johto (Campeão Kanto)", qx, qy, 195, 26, { kind = "primary", font = "micro" }) then
+    LauncherView.unlockKantoChampAndJohto()
   end
 
   -- Separator line
@@ -667,8 +839,7 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
     -- Item description
     Theme.setFont("micro")
     Theme.col(Theme.PAL.textMuted, 1)
-    local shortDesc = it.desc or ""
-    if #shortDesc > 48 then shortDesc = shortDesc:sub(1, 45) .. "..." end
+    local shortDesc = utf8Truncate(it.desc or "", 36)
     love.graphics.print(shortDesc, ix + 12, iy + 30)
 
     -- Inject button
@@ -689,19 +860,12 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
 end
 
 function LauncherView.refreshShinies()
-  local targets = {
-    "roms/FireRedDefinitivo.sav",
-    "roms/FireRed_251+final.sav",
-    "FireRed.sav",
-    GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
-  }
-  for _, path in ipairs(targets) do
-    local f = io.open(path, "rb")
-    if f then
-      f:close()
-      LauncherView.shinyScanResult = GbaShinyDex.scanSave(path)
-      return
-    end
+  local savePath = LauncherView.resolveActiveSavePath()
+  local f = io.open(savePath, "rb")
+  if f then
+    f:close()
+    LauncherView.shinyScanResult = GbaShinyDex.scanSave(savePath)
+    return
   end
   LauncherView.shinyScanResult = { shinies = {}, totalPokemon = 0, totalShinies = 0 }
 end
@@ -878,42 +1042,38 @@ function LauncherView.draw()
   -- Logo
   Theme.setFont("title")
   Theme.col(Theme.PAL.white, 1)
-  love.graphics.print("GbaRecomp", 24, 14)
-  Theme.col(Theme.PAL.gbaPurple, 1)
-  love.graphics.print("++", 175, 14)
+  love.graphics.print("Pokémon Kanto & Johto", 24, 14)
+  Theme.col({ 255, 215, 80 }, 1)
+  local logoTextW = love.graphics.getFont():getWidth("Pokémon Kanto & Johto")
+  love.graphics.print("++", 24 + logoTextW + 4, 14)
 
-  Kit.pill("GEN 3", 216, 20, {
-    bg = Theme.PAL.gbaPurple,
+  Kit.pill("DEFINITIVE 32MB", 24 + logoTextW + 36, 20, {
+    bg = { 160, 110, 20 },
     border = Theme.PAL.white,
     color = Theme.PAL.white,
     font = "micro"
   })
 
-  -- Game selector tabs
+  -- Navigation tabs
   local tabX = 24
   local tabY = 54
   local tabH = 30
-  for _, g in ipairs(GbaRom.KNOWN_GAMES) do
-    local isAct = (LauncherView.mainView == "game" and g.id == LauncherView.activeGameId)
-    local tabW = 100
-    local label = g.short .. " " .. g.name:gsub("Pokémon ", "")
-    if Kit.button("tab_" .. g.id, label, tabX, tabY, tabW, tabH, {
-      kind = "tab",
-      active = isAct,
-      accentCol = g.color,
-      font = "small"
-    }) then
-      LauncherView.mainView = "game"
-      LauncherView.activeGameId = g.id
-      LauncherView.refreshSlots()
-    end
-    tabX = tabX + tabW + 8
+
+  local isGameTab = (LauncherView.mainView == "game")
+  local gameTabW = 135
+  if Kit.button("tab_main_game", "VISÃO DO JOGO", tabX, tabY, gameTabW, tabH, {
+    kind = "tab",
+    active = isGameTab,
+    accentCol = { 215, 155, 30 },
+    font = "small"
+  }) then
+    LauncherView.mainView = "game"
+    LauncherView.refreshSlots()
   end
 
-  -- MODS TAB
   local isModsTab = (LauncherView.mainView == "mods")
-  local modsTabW = 100
-  if Kit.button("tab_mods", "🧩 MODS", tabX + 4, tabY, modsTabW, tabH, {
+  local modsTabW = 105
+  if Kit.button("tab_mods", "MODS & QoL", tabX + gameTabW + 8, tabY, modsTabW, tabH, {
     kind = "tab",
     active = isModsTab,
     accentCol = Theme.PAL.gbaPurple,
@@ -922,10 +1082,9 @@ function LauncherView.draw()
     LauncherView.mainView = "mods"
   end
 
-  -- MOCHILA & ITENS TAB
   local isItemsTab = (LauncherView.mainView == "items")
-  local itemsTabW = 145
-  if Kit.button("tab_items", "🎒 MOCHILA & ITENS", tabX + modsTabW + 10, tabY, itemsTabW, tabH, {
+  local itemsTabW = 135
+  if Kit.button("tab_items", "MOCHILA & ITENS", tabX + gameTabW + modsTabW + 16, tabY, itemsTabW, tabH, {
     kind = "tab",
     active = isItemsTab,
     accentCol = { 220, 140, 40 },
@@ -934,10 +1093,9 @@ function LauncherView.draw()
     LauncherView.mainView = "items"
   end
 
-  -- SHINY DEX TAB
   local isShinyTab = (LauncherView.mainView == "shiny")
-  local shinyTabW = 135
-  if Kit.button("tab_shiny", "✨ SHINY DEX", tabX + modsTabW + itemsTabW + 16, tabY, shinyTabW, tabH, {
+  local shinyTabW = 110
+  if Kit.button("tab_shiny", "SHINYDEX", tabX + gameTabW + modsTabW + itemsTabW + 24, tabY, shinyTabW, tabH, {
     kind = "tab",
     active = isShinyTab,
     accentCol = { 245, 195, 45 },
@@ -948,17 +1106,12 @@ function LauncherView.draw()
   end
 
   -- Header right actions
-  if Kit.button("btn_open_hma", "🛠️ Editor HMA", ww - 315, 16, 140, 28, { kind = "primary", font = "small" }) then
-    local hmaExe = "tools/HexManiacAdvance/HexManiacAdvance.exe"
-    local activeRom = LauncherView.getActiveRom()
-    local romPath = (activeRom and activeRom.displayPath) or "roms/FireRedDefinitivo.gba"
-    local winHma = hmaExe:gsub('/', '\\')
-    local winRom = romPath:gsub('/', '\\')
-    os.execute('start "" "' .. winHma .. '" "' .. winRom .. '"')
-    LauncherView.showToast("Iniciando Hex Maniac Advance...")
+  if Kit.button("btn_open_mods_folder", "Pasta Mods", ww - 275, 16, 120, 28, { kind = "primary", font = "small" }) then
+    love.system.openURL("file://" .. love.filesystem.getWorkingDirectory() .. "/mods")
+    LauncherView.showToast("Pasta mods/ aberta no Explorer!")
   end
 
-  if Kit.button("btn_open_folder", "📂 Abrir Pasta GBA", ww - 165, 16, 145, 28, { font = "small" }) then
+  if Kit.button("btn_open_folder", "Pasta GBA", ww - 145, 16, 125, 28, { font = "small" }) then
     love.system.openURL("file://" .. love.filesystem.getWorkingDirectory())
   end
 
@@ -981,7 +1134,7 @@ function LauncherView.draw()
   local footY = wh - 30
   Theme.setFont("micro")
   Theme.col(Theme.PAL.textDim, 1)
-  love.graphics.print("GbaRecomp++  •  Suporte Nativo a FireRed, LeafGreen, Emerald, Ruby & Sapphire  •  saves/ e gba/", 24, footY)
+  love.graphics.print("Pokémon Kanto & Johto Studio++  •  Edição Definitiva 32MB  •  saves/ e roms/  •  mGBA Integrado", 24, footY)
 
   -- -------------------------------------------------------------
   -- 4. TOAST NOTIFICATION
@@ -1061,10 +1214,7 @@ end
 function LauncherView.keypressed(key)
   if LauncherView.modal then
     if key == "backspace" then
-      local s = LauncherView.modal.text
-      if #s > 0 then
-        LauncherView.modal.text = s:sub(1, #s - 1)
-      end
+      LauncherView.modal.text = utf8PopChar(LauncherView.modal.text)
     elseif key == "return" then
       if LauncherView.modal.type == "new_slot" then
         local slotId = "slot" .. (#LauncherView.slots + 1)

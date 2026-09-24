@@ -61,9 +61,9 @@ function GbaSave.inspectSaveFile(filepath)
     return { name = "Novo Slot", playTime = "00:00", badges = 0 }
   end
 
-  -- Search Section 0 in Slot A (0x0000 - 0x0FFF) and Slot B (0xE000 - 0xEFFF)
-  -- The last 12 bytes of each 4KB chunk contain Section ID (uint16 at +0x0FF4)
-  local bestSlot = nil
+  -- Search Section 0 & 1 in Slot A (0x0000) and Slot B (0xE000)
+  local bestSec0 = nil
+  local bestSec1 = nil
   local highestSaveIndex = -1
 
   local function checkChunk(offset)
@@ -76,45 +76,84 @@ function GbaSave.inspectSaveFile(filepath)
     local saveIndex = string.byte(headerBytes, 9) + string.byte(headerBytes, 10) * 256
       + string.byte(headerBytes, 11) * 65536 + string.byte(headerBytes, 12) * 16777216
 
-    if secId == 0 and sig == 0x08012025 then
-      if saveIndex > highestSaveIndex then
+    if sig == 0x08012025 then
+      if secId == 0 and saveIndex > highestSaveIndex then
         highestSaveIndex = saveIndex
-        bestSlot = offset
+        bestSec0 = offset
+      end
+      if secId == 1 then
+        bestSec1 = offset
       end
     end
   end
 
-  -- Scan 14 sections of Slot A
   for i = 0, 13 do checkChunk(i * 4096) end
-  -- Scan 14 sections of Slot B
   for i = 0, 13 do checkChunk(0xE000 + i * 4096) end
 
-  if not bestSlot then
+  if not bestSec0 then
     f:close()
-    return { name = "Treinador", playTime = "00:00", badges = 0, valid = false }
+    return { name = "Treinador", playTime = "00:00", badges = 0, kantoBadges = 0, johtoBadges = 0, caught = 0, isChampion = false, valid = false }
   end
 
-  -- Read Section 0
-  f:seek("set", bestSlot)
-  local sec0 = f:read(32)
-  f:close()
-
-  if not sec0 or #sec0 < 20 then
-    return { name = "Treinador", playTime = "00:00", badges = 0, valid = false }
+  -- Read Section 0 (Trainer Name, Time, Pokedex)
+  f:seek("set", bestSec0)
+  local sec0 = f:read(4096)
+  if not sec0 or #sec0 < 0x60 then
+    f:close()
+    return { name = "Treinador", playTime = "00:00", badges = 0, kantoBadges = 0, johtoBadges = 0, caught = 0, isChampion = false, valid = false }
   end
 
   local nameBytes = sec0:sub(1, 7)
   local trainerName = decodeGen3String(nameBytes)
-  if not trainerName or #trainerName == 0 then trainerName = "ASH" end
+  if not trainerName or #trainerName == 0 then trainerName = "GU" end
 
   local hours = string.byte(sec0, 0x0F) + string.byte(sec0, 0x10) * 256
   local minutes = string.byte(sec0, 0x11)
   local playTime = string.format("%02d:%02d", hours, minutes)
 
+  -- Count caught in Pokedex (bytes 0x0028 to 0x0058)
+  local caught = 0
+  for b = 0x28, 0x58 do
+    local byteVal = string.byte(sec0, b + 1) or 0
+    while byteVal > 0 do
+      if byteVal % 2 == 1 then caught = caught + 1 end
+      byteVal = math.floor(byteVal / 2)
+    end
+  end
+
+  -- Read Section 1 (Badges and Hall of Fame clear)
+  local kantoBadges = 0
+  local isChampion = false
+  if bestSec1 then
+    f:seek("set", bestSec1)
+    local sec1 = f:read(4096)
+    if sec1 and #sec1 >= 0x0FF0 then
+      -- Badges byte at flags offset + 0x104 (FLAG_BADGE01..08 = 0x820..0x827)
+      local badgeByte = string.byte(sec1, 0x0EE0 + 0x104 + 1) or 0
+      for bit = 0, 7 do
+        if math.floor(badgeByte / (2^bit)) % 2 == 1 then
+          kantoBadges = kantoBadges + 1
+        end
+      end
+      -- FLAG_SYS_GAME_CLEAR = 0x82C (Hall of Fame)
+      local clearByte = string.byte(sec1, 0x0EE0 + 0x105 + 1) or 0
+      if math.floor(clearByte / 16) % 2 == 1 then
+        isChampion = true
+      end
+    end
+  end
+
+  f:close()
+
   return {
     name = trainerName,
     playTime = playTime,
     saveIndex = highestSaveIndex,
+    caught = caught,
+    badges = kantoBadges,
+    kantoBadges = kantoBadges,
+    johtoBadges = 0,
+    isChampion = isChampion,
     valid = true
   }
 end
@@ -159,7 +198,41 @@ function GbaSave.saveManifest(manifest)
   writeFile(GbaSave.getManifestPath(), table.concat(lines, "\n"))
 end
 
+function GbaSave.syncSaveWithEmulator(gameId)
+  local manifest = GbaSave.loadManifest()
+  local activeSlotId = manifest.activeSlots[gameId] or "slot1"
+  local slotPath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. activeSlotId .. ".sav"
+
+  local candidates = {
+    "roms/Pokemon_Kanto_Johto.sav",
+    "Pokemon_Kanto_Johto.sav",
+    "roms/FireRedDefinitivo.sav",
+    "FireRed.sav"
+  }
+
+  for _, c in ipairs(candidates) do
+    local f = io.open(c, "rb")
+    if f then
+      local size = f:seek("end")
+      f:seek("set", 0)
+      local content = f:read("*a")
+      f:close()
+
+      if content and #content >= 4096 then
+        local slotContent = readFile(slotPath)
+        if not slotContent or #slotContent ~= #content or slotContent ~= content then
+          writeFile(slotPath, content)
+          return true
+        end
+        return false
+      end
+    end
+  end
+  return false
+end
+
 function GbaSave.listSlots(gameId)
+  GbaSave.syncSaveWithEmulator(gameId)
   local manifest = GbaSave.loadManifest()
   local activeSlotId = manifest.activeSlots[gameId] or "slot1"
   local slots = {}
@@ -190,7 +263,13 @@ function GbaSave.listSlots(gameId)
       exists = exists,
       filepath = filepath,
       isActive = (slotId == activeSlotId),
-      sizeBytes = exists and #fileContent or 0
+      sizeBytes = exists and #fileContent or 0,
+      caught = (info and info.caught) or 0,
+      badges = (info and info.badges) or 0,
+      kantoBadges = (info and info.kantoBadges) or 0,
+      johtoBadges = (info and info.johtoBadges) or 0,
+      isChampion = (info and info.isChampion) or false,
+      info = info
     })
   end
 
@@ -203,10 +282,12 @@ function GbaSave.createSlot(gameId, slotId, name)
   GbaSave.saveManifest(manifest)
 
   local filepath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. slotId .. ".sav"
-  -- Create blank 128KB save if not present
   if not readFile(filepath) then
-    local blank = string.rep("\255", 131072)
-    writeFile(filepath, blank)
+    local template = readFile(GbaSave.getSaveDir() .. "/" .. gameId .. "_slot1.sav")
+      or readFile("FireRed.sav")
+      or readFile("roms/FireRedDefinitivo.sav")
+      or string.rep("\255", 131072)
+    writeFile(filepath, template)
   end
   return true
 end
@@ -215,26 +296,31 @@ function GbaSave.setActiveSlot(gameId, slotId, romPath)
   local manifest = GbaSave.loadManifest()
   local prevSlotId = manifest.activeSlots[gameId] or "slot1"
 
-  -- If ROM path is provided, sync previous active slot from emulator's .sav
   local emulatorSavPath = nil
+  local emulatorSrmPath = nil
   if romPath then
     emulatorSavPath = romPath:gsub("%.%w+$", ".sav")
+    emulatorSrmPath = romPath:gsub("%.%w+$", ".srm")
   end
 
-  if emulatorSavPath and readFile(emulatorSavPath) then
+  -- Only sync from emulator to previous slot if switching to a DIFFERENT slot
+  if prevSlotId ~= slotId and emulatorSavPath and readFile(emulatorSavPath) then
     local currentContent = readFile(emulatorSavPath)
     local prevSlotPath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. prevSlotId .. ".sav"
     writeFile(prevSlotPath, currentContent)
   end
 
-  -- Now load the new slot into emulator's .sav
   manifest.activeSlots[gameId] = slotId
   GbaSave.saveManifest(manifest)
 
+  -- Copy active slot to emulator's .sav and .srm
   local newSlotPath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. slotId .. ".sav"
   local newContent = readFile(newSlotPath)
   if newContent and emulatorSavPath then
     writeFile(emulatorSavPath, newContent)
+    if emulatorSrmPath then
+      writeFile(emulatorSrmPath, newContent)
+    end
   end
 
   return true

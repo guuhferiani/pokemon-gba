@@ -62,17 +62,31 @@ local function getLabelCanvas(game)
   -- Title Text
   love.graphics.setColor(1, 1, 1, 0.95)
   Theme.setFont("header")
-  local title = (game.name or "Pokémon"):upper()
   love.graphics.print("POKÉMON", 140, 32)
-  Theme.setFont("title")
-  love.graphics.setColor(1, 0.95, 0.4, 1)
-  local sub = (game.short == "FR" and "FIRE RED") or (game.short == "LG" and "LEAF GREEN")
-    or (game.short == "E" and "EMERALD") or (game.short == "R" and "RUBY") or "SAPPHIRE"
-  love.graphics.print(sub, 140, 56)
+
+  local isKJ = (game.id == "kantojohto" or game.short == "K&J")
+  local sub = (isKJ and "KANTO & JOHTO")
+    or (game.short == "FR" and "FIRE RED")
+    or (game.short == "LG" and "LEAF GREEN")
+    or (game.short == "E" and "EMERALD")
+    or (game.short == "R" and "RUBY")
+    or (game.short == "S" and "SAPPHIRE")
+    or (game.name:gsub("Pokémon ", ""):upper())
+
+  if isKJ then
+    Theme.setFont("header")
+    love.graphics.setColor(1, 0.95, 0.45, 1)
+    love.graphics.print(sub, 140, 58)
+  else
+    Theme.setFont("title")
+    love.graphics.setColor(1, 0.95, 0.4, 1)
+    love.graphics.print(sub, 140, 56)
+  end
 
   Theme.setFont("small")
-  love.graphics.setColor(1, 1, 1, 0.8)
-  love.graphics.print("VERSION", 142, 92)
+  love.graphics.setColor(1, 1, 1, 0.85)
+  local edition = isKJ and "DEFINITIVE EDITION" or "VERSION"
+  love.graphics.print(edition, 142, 90)
 
   -- Bottom bar with code & Nintendo Seal
   love.graphics.setColor(0, 0, 0, 0.4)
