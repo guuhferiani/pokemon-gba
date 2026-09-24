@@ -1,0 +1,13 @@
+{
+  "id": "pokemon-gba",
+  "title": "Pokémon Kanto+Johto GBA — Estado do Projeto",
+  "summary": "Contexto completo e verificado do projeto Pokemon-GBA. ROM hack de 32MB baseada em FireRed BPRE (Game Code: BPKJ). Unifica Kanto e Johto com encontros expandidos, Physical/Special split, Run Indoors, No Trade Evolutions, e tela de título customizada (Charizard vs Lugia). Launcher desktop em Lua/LÖVE com hub de saves. Ferramentas de automação em Python. Leia o arquivo artifacts/project_state.md para o contexto completo.",
+  "created_at": "2026-09-24T03:54:00-03:00",
+  "updated_at": "2026-09-24T03:54:00-03:00",
+  "references": [
+    "c:/Users/Gustavo/Documents/Projetos Antigravity/Pokemon-GBA/tools/kj_rom_engine.py",
+    "c:/Users/Gustavo/Documents/Projetos Antigravity/Pokemon-GBA/tools/patch_title_screen.py",
+    "c:/Users/Gustavo/Documents/Projetos Antigravity/Pokemon-GBA/main.lua",
+    "c:/Users/Gustavo/Documents/Projetos Antigravity/Pokemon-GBA/CONTEXT.md"
+  ]
+}
