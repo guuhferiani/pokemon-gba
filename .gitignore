@@ -31,6 +31,8 @@ roms/*.cht
 *.log
 error.log
 crash.dmp
+__pycache__/
+*.pyc
 
 # OS & IDE metadata
 .DS_Store

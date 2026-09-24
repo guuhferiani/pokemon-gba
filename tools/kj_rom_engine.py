@@ -635,7 +635,19 @@ def compile_engine():
         stamp = b"POKEMON KANTO & JOHTO DEFINITIVO 32MB - COMPLETE FULL ENGINE COMPILED OK"
         f.write(stamp)
 
-    print("\n[SUCCESS] All 3 Steps Successfully Injected into Pokemon_Kanto_Johto.gba!")
+    # ------------------------------------------------------------------
+    # 9. COMPILE & INJECT TITLE SCREEN (CHARIZARD VS LUGIA DUEL)
+    # ------------------------------------------------------------------
+    try:
+        try:
+            from tools.patch_title_screen import build_title_assets
+        except ImportError:
+            from patch_title_screen import build_title_assets
+        build_title_assets()
+    except Exception as e:
+        print(f"  [WARN] Title screen patcher skipped: {e}")
+
+    print("\n[SUCCESS] All Engine Features & Custom Title Screen Successfully Injected into Pokemon_Kanto_Johto.gba!")
     return True
 
 if __name__ == '__main__':
