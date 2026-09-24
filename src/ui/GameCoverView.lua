@@ -9,15 +9,19 @@ local GameCoverView = {
 
 function GameCoverView.init()
   if not GameCoverView.imageLoaded then
-    local path = "assets/kanto_johto_box_art.jpg"
-    local ok, img = pcall(love.graphics.newImage, path)
-    if not (ok and img) then
-      path = "assets/kanto_johto_dual_cover.jpg"
-      ok, img = pcall(love.graphics.newImage, path)
-    end
-    if ok and img then
-      GameCoverView.coverImage = img
-      GameCoverView.imageLoaded = true
+    local candidates = {
+      "assets/kanto_johto_cover.jpg",
+      "assets/kanto_johto_box_art.jpg",
+      "assets/kanto johto cover.jpg",
+      "assets/kanto_johto_dual_cover.jpg",
+    }
+    for _, path in ipairs(candidates) do
+      local ok, img = pcall(love.graphics.newImage, path)
+      if ok and img then
+        GameCoverView.coverImage = img
+        GameCoverView.imageLoaded = true
+        break
+      end
     end
   end
 end

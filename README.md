@@ -7,6 +7,10 @@
 [![Python Tools](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/Original%20Code-MIT-green.svg)](LICENSE)
 
+<p align="center">
+  <img src="assets/kanto_johto_box_art.jpg" alt="Pokémon Kanto & Johto Definitivo GBA Box Art" width="360">
+</p>
+
 ---
 
 ## 🧭 Visão Geral
