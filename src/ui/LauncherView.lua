@@ -434,13 +434,7 @@ function LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
     bx = bx + 28
   end
 
-  -- Quick shortcut button to unlock Johto directly from the main dashboard
-  if Kit.button("btn_side_unlock_johto", "Liberar Johto", heroX + heroW - 130, jProgY + 34, 115, 26, {
-    kind = "accent",
-    font = "micro"
-  }) then
-    LauncherView.unlockKantoChampAndJohto()
-  end
+  -- Johto badge circles are read-only (reflect save data)
 
   -- -------------------------------------------------------------
   -- SLOTS LIST & NEW SLOT
@@ -747,10 +741,6 @@ function LauncherView.drawItemsPanel(ww, wh, headerH)
   qx = qx + 96
   if Kit.button("btn_q_natdex", "Liberar Dex (386)", qx, qy, 125, 26, { kind = "accent", font = "micro" }) then
     LauncherView.unlockNationalDex()
-  end
-  qx = qx + 131
-  if Kit.button("btn_q_champ_johto", "Liberar Johto (Campeão Kanto)", qx, qy, 195, 26, { kind = "primary", font = "micro" }) then
-    LauncherView.unlockKantoChampAndJohto()
   end
 
   -- Separator line
