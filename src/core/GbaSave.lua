@@ -1,4 +1,4 @@
-local GbaSave = {}
+﻿local GbaSave = {}
 
 -- Character encoding for Pokemon Gen 3 English (offsets 0xBB - 0xD4 = A-Z, 0xD5 - 0xEE = a-z, 0xA1 - 0xAA = 0-9)
 local GEN3_CHARS = {}
@@ -204,32 +204,62 @@ function GbaSave.syncSaveWithEmulator(gameId)
   local slotPath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. activeSlotId .. ".sav"
 
   local candidates = {
+    -- Prioridade 1: .srm na pasta roms/ (Android + mGBA PC gravam aqui junto à ROM)
+    "roms/Pokemon Kanto Johto.srm",
+    "roms/Pokemon_Kanto_Johto.srm",
+    -- Prioridade 2: .sav na pasta roms/ (mGBA PC)
     "roms/Pokemon Kanto Johto.sav",
-    "Pokemon Kanto Johto.sav",
     "roms/Pokemon_Kanto_Johto.sav",
-    "Pokemon_Kanto_Johto.sav",
+    -- Prioridade 3: raiz do projeto
+    "Pokemon Kanto Johto.srm",
+    "Pokemon Kanto Johto.sav",
+    -- Prioridade 4: pasta saves/ (cópias internas do Studio++)
     "saves/Pokemon Kanto Johto.srm",
-    "roms/FireRedDefinitivo.sav",
-    "FireRed.sav"
+    "saves/kantojohto_slot1.sav",
   }
 
+  -- Coleta todos os candidatos validos
+  local found = {}
   for _, c in ipairs(candidates) do
     local f = io.open(c, "rb")
     if f then
-      local size = f:seek("end")
+      local sz = f:seek("end")
       f:seek("set", 0)
       local content = f:read("*a")
       f:close()
-
       if content and #content >= 4096 then
-        local slotContent = readFile(slotPath)
-        if not slotContent or #slotContent ~= #content or slotContent ~= content then
-          writeFile(slotPath, content)
-          return true
-        end
-        return false
+        table.insert(found, { path = c, content = content, size = #content })
       end
     end
+  end
+
+  if #found == 0 then return false end
+
+  -- Escolhe o melhor candidato:
+  -- Com lfs: mais recente por data de modificacao vence.
+  -- Sem lfs: maior tamanho vence (mGBA PC = 131088 > Android .srm = 131072).
+  local best = found[1]
+  local ok_lfs, lfs = pcall(require, "lfs")
+  if ok_lfs and lfs then
+    for _, candidate in ipairs(found) do
+      local a = lfs.attributes(candidate.path)
+      local b = lfs.attributes(best.path)
+      if a and b and a.modification > b.modification then
+        best = candidate
+      end
+    end
+  else
+    for _, candidate in ipairs(found) do
+      if candidate.size > best.size then
+        best = candidate
+      end
+    end
+  end
+
+  local slotContent = readFile(slotPath)
+  if not slotContent or slotContent ~= best.content then
+    writeFile(slotPath, best.content)
+    return true
   end
   return false
 end
