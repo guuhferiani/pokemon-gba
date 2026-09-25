@@ -4,18 +4,33 @@ Pokemon Kanto & Johto Definitivo - Authentic Title Screen Compiler
 Integrates:
  1. Lugia (Silver/SoulSilver Mascot) facing Charizard in the title screen duel on BG 1
  2. Seamless shared palette integration (Palette 13) preserving Charizard and Lugia colors
- 3. GBA BIOS LZ77 compressed streams written to safe ROM free space (0xeb0b20)
- 4. Pointers hooked at official FireRed title loader tables:
+ 3. Custom "KANTO JOHTO" Subtitle replacing "FIRERED DEFINITIVO"
+ 4. Author tag "guh feriani" in the top black band
+ 5. GBA BIOS LZ77 compressed streams written to safe ROM free space
+ 6. Pointers hooked at official FireRed title loader tables:
     - 0x78aa0: BoxArtMonPals
     - 0x78aa4: BoxArtMonTiles (LZ77)
     - 0x78aa8: BoxArtMonMap (LZ77)
-    - 0x796c4 & 0x78f90: BoxArtMonPals reloads
+    - 0x78a98: LogoTiles (LZ77)
+    - 0x78a9c: LogoTilemap (LZ77)
 """
 
 import os
 import struct
 
-ROM_PATH = os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon_Kanto_Johto.gba")
+def find_rom_path():
+    candidates = [
+        os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon Kanto Johto.gba"),
+        os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon_Kanto_Johto.gba"),
+        os.path.join(os.path.dirname(__file__), "..", "Pokemon Kanto Johto.gba"),
+        os.path.join(os.path.dirname(__file__), "..", "Pokemon_Kanto_Johto.gba")
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return candidates[0]
+
+ROM_PATH = find_rom_path()
 
 # GBA LZ77 Compressor
 def lz77_compress(data):
@@ -79,120 +94,468 @@ def remap_lugia_col(c):
     if c in (6, 7, 9, 10): return 2 # Royal Indigo belly & crests
     return 1 # Black outline
 
+GLYPHS = {
+    'K': [
+        "###   ####",
+        "###  #### ",
+        "### ####  ",
+        "#######   ",
+        "######    ",
+        "#######   ",
+        "### ####  ",
+        "###  #### ",
+        "###   ####",
+        "###    ###",
+        "###    ###",
+        "###    ###"
+    ],
+    'A': [
+        "  ######  ",
+        " ######## ",
+        " #### ####",
+        "####   ###",
+        "####   ###",
+        "##########",
+        "##########",
+        "####   ###",
+        "####   ###",
+        "####   ###",
+        "####   ###",
+        "####   ###"
+    ],
+    'N': [
+        "####   ###",
+        "#####  ###",
+        "###### ###",
+        "##########",
+        "### ######",
+        "###  #####",
+        "###   ####",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###"
+    ],
+    'T': [
+        "##########",
+        "##########",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   ",
+        "   ####   "
+    ],
+    'O': [
+        "  ######  ",
+        " ######## ",
+        "####   ###",
+        "###     ##",
+        "###     ##",
+        "###     ##",
+        "###     ##",
+        "###     ##",
+        "####   ###",
+        " ######## ",
+        "  ######  ",
+        "   ####   "
+    ],
+    'J': [
+        "    ######",
+        "    ######",
+        "       ###",
+        "       ###",
+        "       ###",
+        "       ###",
+        "###    ###",
+        "####   ###",
+        " #########",
+        "  ####### ",
+        "   #####  ",
+        "    ###   "
+    ],
+    'H': [
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "##########",
+        "##########",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###",
+        "###    ###"
+    ]
+}
+
+MINI_FONT = {
+    'g': [
+        " 111 ",
+        "1   1",
+        " 1111",
+        "    1",
+        "1   1",
+        " 111 "
+    ],
+    'u': [
+        "1   1",
+        "1   1",
+        "1   1",
+        "1   1",
+        "1   1",
+        " 1111"
+    ],
+    'h': [
+        "1    ",
+        "1    ",
+        "1111 ",
+        "1   1",
+        "1   1",
+        "1   1"
+    ],
+    ' ': [
+        "  ",
+        "  ",
+        "  ",
+        "  ",
+        "  ",
+        "  "
+    ],
+    'f': [
+        "  11",
+        " 1  ",
+        "111 ",
+        " 1  ",
+        " 1  ",
+        " 1  "
+    ],
+    'e': [
+        " 111 ",
+        "1   1",
+        "11111",
+        "1    ",
+        "1   1",
+        " 111 "
+    ],
+    'r': [
+        "1 11",
+        "11  ",
+        "1   ",
+        "1   ",
+        "1   ",
+        "1   "
+    ],
+    'i': [
+        "1",
+        " ",
+        "1",
+        "1",
+        "1",
+        "1"
+    ],
+    'a': [
+        " 111 ",
+        "    1",
+        " 1111",
+        "1   1",
+        "1  11",
+        " 11 1"
+    ],
+    'n': [
+        "1111 ",
+        "1   1",
+        "1   1",
+        "1   1",
+        "1   1",
+        "1   1"
+    ]
+}
+
+def render_line(word, fill_col=105, highlight_col=109, shadow_col=108, outline_col=1):
+    letter_widths = [len(GLYPHS[ch][0]) for ch in word]
+    spacing = 2
+    total_w = sum(letter_widths) + spacing * (len(word) - 1)
+    h = 16
+    grid = [[0] * total_w for _ in range(h)]
+    cur_x = 0
+    for ch in word:
+        glyph = GLYPHS[ch]
+        gw = len(glyph[0])
+        gh = len(glyph)
+        start_y = (h - gh) // 2
+        for y in range(gh):
+            for x in range(gw):
+                if glyph[y][x] == '#':
+                    col = fill_col
+                    if y < 3: col = highlight_col
+                    elif y >= gh - 3: col = shadow_col
+                    grid[start_y + y][cur_x + x] = col
+        cur_x += gw + spacing
+    
+    out_w = total_w + 2
+    out_grid = [[0] * out_w for _ in range(h)]
+    for y in range(h):
+        for x in range(total_w):
+            if grid[y][x] != 0:
+                out_grid[y][x + 1] = grid[y][x]
+    
+    final_grid = [[0] * out_w for _ in range(h)]
+    for y in range(h):
+        for x in range(out_w):
+            if out_grid[y][x] != 0:
+                final_grid[y][x] = out_grid[y][x]
+            else:
+                has_n = False
+                for dy in [-1, 0, 1]:
+                    for dx in [-1, 0, 1]:
+                        if dy == 0 and dx == 0: continue
+                        ny, nx = y + dy, x + dx
+                        if 0 <= ny < h and 0 <= nx < out_w and out_grid[ny][nx] != 0:
+                            has_n = True; break
+                    if has_n: break
+                if has_n: final_grid[y][x] = outline_col
+                
+    return final_grid, out_w, h
+
+def render_mini_text(text, fill_col=109, shadow_col=112):
+    widths = [len(MINI_FONT[ch][0]) for ch in text]
+    spacing = 1
+    total_w = sum(widths) + spacing * (len(text) - 1)
+    grid = [[0] * total_w for _ in range(8)]
+    cur_x = 0
+    for ch in text:
+        g = MINI_FONT[ch]
+        gw = len(g[0])
+        gh = len(g)
+        start_y = 1
+        for y in range(gh):
+            for x in range(gw):
+                if g[y][x] == '1':
+                    grid[start_y + y][cur_x + x] = fill_col
+                    if start_y + y + 1 < 8 and grid[start_y + y + 1][cur_x + x] == 0:
+                        grid[start_y + y + 1][cur_x + x] = shadow_col
+        cur_x += gw + spacing
+    return grid, total_w
+
 def build_title_assets():
-    if not os.path.exists(ROM_PATH):
-        print(f"[ERROR] ROM not found at: {ROM_PATH}")
-        return False
+    target_roms = []
+    r1 = os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon Kanto Johto.gba")
+    r2 = os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon_Kanto_Johto.gba")
+    if os.path.exists(r1): target_roms.append(r1)
+    if os.path.exists(r2) and r2 not in target_roms: target_roms.append(r2)
+    if not target_roms:
+        target_roms = [r1]
 
-    with open(ROM_PATH, 'rb') as f:
-        rom = bytearray(f.read())
+    for rom_path in target_roms:
+        if not os.path.exists(rom_path):
+            continue
+        print(f"[TITLE] Processing ROM: {rom_path}")
+        with open(rom_path, 'rb') as f:
+            rom = bytearray(f.read())
 
-    # 1. Decompress original Charizard title screen assets (BG 1)
-    charizard_tiles = lz77_decompress(rom, 0xead608)
-    charizard_tmap = lz77_decompress(rom, 0xeadee4)
-    charizard_pal = rom[0xead5e8 : 0xead5e8 + 32]
+        # =====================================================================
+        # PART 1: CHARIZARD VS LUGIA DUEL ON BG1
+        # =====================================================================
+        charizard_tiles = lz77_decompress(rom, 0xead608)
+        charizard_tmap = lz77_decompress(rom, 0xeadee4)
+        charizard_pal = rom[0xead5e8 : 0xead5e8 + 32]
+        lugia_raw = lz77_decompress(rom, 0x7748c0)
 
-    # 2. Decompress Lugia front battle sprite from Gen 3 ROM tables (0x7748c0)
-    lugia_raw = lz77_decompress(rom, 0x7748c0)
+        colors_raw = list(struct.unpack('<16H', charizard_pal))
+        colors_raw[2] = rgb555(45, 60, 130)    # Royal Indigo
+        colors_raw[3] = rgb555(255, 255, 255)  # Pure White
+        colors_raw[4] = rgb555(180, 195, 225)  # Silver Slate
+        new_pal_bytes = bytearray()
+        for c in colors_raw:
+            new_pal_bytes.extend(struct.pack('<H', c))
 
-    # 3. Build unified 16-color Palette 13 (Charizard + Lugia)
-    colors_raw = list(struct.unpack('<16H', charizard_pal))
-    colors_raw[2] = rgb555(45, 60, 130)    # Royal Indigo (Lugia belly & eye spikes)
-    colors_raw[3] = rgb555(255, 255, 255)  # Pure White (Lugia body)
-    colors_raw[4] = rgb555(180, 195, 225)  # Silver Slate (Lugia shadows)
-    # Colors 6..15 remain authentic Charizard flame and scales
-    new_pal_bytes = bytearray()
-    for c in colors_raw:
-        new_pal_bytes.extend(struct.pack('<H', c))
+        combined_tiles = bytearray(charizard_tiles)
+        lugia_start_tile = len(charizard_tiles) // 32
 
-    # 4. Build combined tiles: Charizard tiles (0..134) + Lugia tiles (135..198)
-    combined_tiles = bytearray(charizard_tiles)
-    lugia_start_tile = len(charizard_tiles) // 32
+        grid = [[0]*64 for _ in range(64)]
+        for ty in range(8):
+            for tx in range(8):
+                tile_idx = ty * 8 + tx
+                tile_data = lugia_raw[tile_idx * 32 : (tile_idx + 1) * 32]
+                for y in range(8):
+                    row = tile_data[y*4 : (y+1)*4]
+                    for x in range(0, 8, 2):
+                        b = row[x//2]
+                        grid[ty*8 + y][63 - (tx*8 + x)] = remap_lugia_col(b & 0xF)
+                        grid[ty*8 + y][63 - (tx*8 + x + 1)] = remap_lugia_col((b >> 4) & 0xF)
 
-    # Decode Lugia's 64x64 sprite into grid, flipping horizontally so Lugia faces Charizard
-    grid = [[0]*64 for _ in range(64)]
-    for ty in range(8):
-        for tx in range(8):
-            tile_idx = ty * 8 + tx
-            tile_data = lugia_raw[tile_idx * 32 : (tile_idx + 1) * 32]
-            for y in range(8):
-                row = tile_data[y*4 : (y+1)*4]
-                for x in range(0, 8, 2):
-                    b = row[x//2]
-                    grid[ty*8 + y][63 - (tx*8 + x)] = remap_lugia_col(b & 0xF)
-                    grid[ty*8 + y][63 - (tx*8 + x + 1)] = remap_lugia_col((b >> 4) & 0xF)
+        for ty in range(8):
+            for tx in range(8):
+                tile_bytes = bytearray(32)
+                for y in range(8):
+                    for x in range(0, 8, 2):
+                        c1 = grid[ty*8 + y][tx*8 + x]
+                        c2 = grid[ty*8 + y][tx*8 + x + 1]
+                        tile_bytes[y*4 + x//2] = (c2 << 4) | c1
+                combined_tiles.extend(tile_bytes)
 
-    # Encode flipped Lugia into 4bpp GBA tiles
-    for ty in range(8):
-        for tx in range(8):
-            tile_bytes = bytearray(32)
-            for y in range(8):
-                for x in range(0, 8, 2):
-                    c1 = grid[ty*8 + y][tx*8 + x]
-                    c2 = grid[ty*8 + y][tx*8 + x + 1]
-                    tile_bytes[y*4 + x//2] = (c2 << 4) | c1
-            combined_tiles.extend(tile_bytes)
+        tmap_entries = list(struct.unpack(f'<{len(charizard_tmap)//2}H', charizard_tmap))
+        lugia_col = 1
+        lugia_row = 10
+        for ty in range(8):
+            for tx in range(8):
+                tile_id = lugia_start_tile + (ty * 8 + tx)
+                tile_data = combined_tiles[tile_id * 32 : (tile_id + 1) * 32]
+                if any(b != 0 for b in tile_data):
+                    row = lugia_row + ty
+                    col = lugia_col + tx
+                    if row < 20 and col < 32:
+                        tmap_entries[row * 32 + col] = (13 << 12) | tile_id
 
-    # 5. Build combined tilemap: Charizard at cols 17..30 + Lugia at cols 1..8, rows 10..17
-    tmap_entries = list(struct.unpack(f'<{len(charizard_tmap)//2}H', charizard_tmap))
-    lugia_col = 1
-    lugia_row = 10
-    for ty in range(8):
-        for tx in range(8):
-            tile_id = lugia_start_tile + (ty * 8 + tx)
-            tile_data = combined_tiles[tile_id * 32 : (tile_id + 1) * 32]
-            if any(b != 0 for b in tile_data):
-                row = lugia_row + ty
-                col = lugia_col + tx
-                if row < 20 and col < 32:
-                    tmap_entries[row * 32 + col] = (13 << 12) | tile_id
+        new_tmap_bytes = bytearray()
+        for e in tmap_entries:
+            new_tmap_bytes.extend(struct.pack('<H', e))
 
-    new_tmap_bytes = bytearray()
-    for e in tmap_entries:
-        new_tmap_bytes.extend(struct.pack('<H', e))
+        comp_char_tiles = lz77_compress(bytes(combined_tiles))
+        comp_char_tmap = lz77_compress(bytes(new_tmap_bytes))
 
-    # 6. Compress with BIOS-compatible LZ77
-    comp_tiles = lz77_compress(bytes(combined_tiles))
-    comp_tmap = lz77_compress(bytes(new_tmap_bytes))
-    print(f"[TITLE] Combined Tiles compressed: {len(combined_tiles)} -> {len(comp_tiles)} bytes")
-    print(f"[TITLE] Combined Tilemap compressed: {len(new_tmap_bytes)} -> {len(comp_tmap)} bytes")
+        # Write Charizard vs Lugia to 0xeb0b20
+        cur_off = 0xeb0b20
+        pal_off = cur_off
+        cur_off += len(new_pal_bytes)
+        while cur_off % 4 != 0: cur_off += 1
 
-    # 7. Write to safe ROM free space (0xeb0b20)
-    cur_off = 0xeb0b20
-    pal_off = cur_off
-    cur_off += len(new_pal_bytes)
-    while cur_off % 4 != 0: cur_off += 1
+        tiles_off = cur_off
+        cur_off += len(comp_char_tiles)
+        while cur_off % 4 != 0: cur_off += 1
 
-    tiles_off = cur_off
-    cur_off += len(comp_tiles)
-    while cur_off % 4 != 0: cur_off += 1
+        tmap_off = cur_off
+        cur_off += len(comp_char_tmap)
+        while cur_off % 4 != 0: cur_off += 1
 
-    tmap_off = cur_off
-    cur_off += len(comp_tmap)
-    while cur_off % 4 != 0: cur_off += 1
+        ptr_pal = 0x08000000 + pal_off
+        ptr_char_tiles = 0x08000000 + tiles_off
+        ptr_char_tmap = 0x08000000 + tmap_off
 
-    ptr_pal = 0x08000000 + pal_off
-    ptr_tiles = 0x08000000 + tiles_off
-    ptr_tmap = 0x08000000 + tmap_off
+        rom[pal_off : pal_off + len(new_pal_bytes)] = new_pal_bytes
+        rom[tiles_off : tiles_off + len(comp_char_tiles)] = comp_char_tiles
+        rom[tmap_off : tmap_off + len(comp_char_tmap)] = comp_char_tmap
 
-    rom[pal_off : pal_off + len(new_pal_bytes)] = new_pal_bytes
-    rom[tiles_off : tiles_off + len(comp_tiles)] = comp_tiles
-    rom[tmap_off : tmap_off + len(comp_tmap)] = comp_tmap
+        struct.pack_into('<I', rom, 0x78aa0, ptr_pal)
+        struct.pack_into('<I', rom, 0x78aa4, ptr_char_tiles)
+        struct.pack_into('<I', rom, 0x78aa8, ptr_char_tmap)
+        struct.pack_into('<I', rom, 0x796c4, ptr_pal)
+        struct.pack_into('<I', rom, 0x78f90, ptr_pal)
 
-    # 8. Hook official FireRed title screen loader pointers
-    struct.pack_into('<I', rom, 0x78aa0, ptr_pal)
-    struct.pack_into('<I', rom, 0x78aa4, ptr_tiles)
-    struct.pack_into('<I', rom, 0x78aa8, ptr_tmap)
-    struct.pack_into('<I', rom, 0x796c4, ptr_pal)
-    struct.pack_into('<I', rom, 0x78f90, ptr_pal)
+        # =====================================================================
+        # PART 2: "KANTO JOHTO" SUBTITLE & "guh feriani" LOGO LAYER
+        # =====================================================================
+        logo_tiles = bytearray(lz77_decompress(rom, 0x7D6CC0))
+        logo_tmap = bytearray(lz77_decompress(rom, 0xEAD390))
 
-    with open(ROM_PATH, 'wb') as f:
-        f.write(rom)
+        # Clear old subtitle (rows 7..12, cols 5..17)
+        for r in range(7, 13):
+            for c in range(5, 18):
+                struct.pack_into('<H', logo_tmap, (r * 32 + c) * 2, 0)
 
-    print(f"\n[SUCCESS] Title Screen updated with Charizard vs Lugia Duel!")
-    print(f"  • Palette Pointer: 0x78aa0 -> {hex(ptr_pal)}")
-    print(f"  • Tileset Pointer: 0x78aa4 -> {hex(ptr_tiles)}")
-    print(f"  • Tilemap Pointer: 0x78aa8 -> {hex(ptr_tmap)}")
+        # KANTO (rows 8 & 9)
+        kanto_grid, kw, kh = render_line("KANTO", fill_col=105, highlight_col=109, shadow_col=108, outline_col=1)
+        kanto_canvas = [[0] * 104 for _ in range(16)]
+        start_x = (104 - kw) // 2
+        for y in range(kh):
+            for x in range(kw):
+                kanto_canvas[y][start_x + x] = kanto_grid[y][x]
+
+        # JOHTO (rows 10 & 11)
+        johto_grid, jw, jh = render_line("JOHTO", fill_col=105, highlight_col=109, shadow_col=108, outline_col=1)
+        johto_canvas = [[0] * 104 for _ in range(16)]
+        start_x = (104 - jw) // 2
+        for y in range(jh):
+            for x in range(jw):
+                johto_canvas[y][start_x + x] = johto_grid[y][x]
+
+        # guh feriani (row 00, cols 1..9)
+        name_grid, nw = render_mini_text("guh feriani", fill_col=109, shadow_col=112)
+        name_canvas = [[0] * 72 for _ in range(8)]
+        start_name_x = (72 - nw) // 2
+        for y in range(8):
+            for x in range(nw):
+                name_canvas[y][start_name_x + x] = name_grid[y][x]
+
+        next_tile_id = 175
+        for tr in range(2):
+            row_idx = 8 + tr
+            for tc in range(13):
+                col_idx = 5 + tc
+                tile_bytes = bytearray(64)
+                has_pixels = False
+                for py in range(8):
+                    for px in range(8):
+                        val = kanto_canvas[tr * 8 + py][tc * 8 + px]
+                        tile_bytes[py * 8 + px] = val
+                        if val != 0: has_pixels = True
+                if has_pixels:
+                    t_id = next_tile_id
+                    next_tile_id += 1
+                    logo_tiles[t_id * 64 : (t_id + 1) * 64] = tile_bytes
+                    struct.pack_into('<H', logo_tmap, (row_idx * 32 + col_idx) * 2, t_id)
+
+        for tr in range(2):
+            row_idx = 10 + tr
+            for tc in range(13):
+                col_idx = 5 + tc
+                tile_bytes = bytearray(64)
+                has_pixels = False
+                for py in range(8):
+                    for px in range(8):
+                        val = johto_canvas[tr * 8 + py][tc * 8 + px]
+                        tile_bytes[py * 8 + px] = val
+                        if val != 0: has_pixels = True
+                if has_pixels:
+                    t_id = next_tile_id
+                    next_tile_id += 1
+                    logo_tiles[t_id * 64 : (t_id + 1) * 64] = tile_bytes
+                    struct.pack_into('<H', logo_tmap, (row_idx * 32 + col_idx) * 2, t_id)
+
+        for tc in range(9):
+            col_idx = 1 + tc
+            tile_bytes = bytearray(64)
+            has_pixels = False
+            for py in range(8):
+                for px in range(8):
+                    val = name_canvas[py][tc * 8 + px]
+                    tile_bytes[py * 8 + px] = val
+                    if val != 0: has_pixels = True
+            if has_pixels:
+                t_id = next_tile_id
+                next_tile_id += 1
+                logo_tiles[t_id * 64 : (t_id + 1) * 64] = tile_bytes
+                struct.pack_into('<H', logo_tmap, (0 * 32 + col_idx) * 2, t_id)
+
+        comp_logo_tiles = lz77_compress(bytes(logo_tiles))
+        comp_logo_tmap = lz77_compress(bytes(logo_tmap))
+
+        # Write to safe expanded 32MB space at 0x019C0000
+        logo_tiles_off = 0x019C0000
+        logo_tmap_off = logo_tiles_off + len(comp_logo_tiles)
+        while logo_tmap_off % 4 != 0: logo_tmap_off += 1
+
+        ptr_logo_tiles = 0x08000000 + logo_tiles_off
+        ptr_logo_tmap = 0x08000000 + logo_tmap_off
+
+        rom[logo_tiles_off : logo_tiles_off + len(comp_logo_tiles)] = comp_logo_tiles
+        rom[logo_tmap_off : logo_tmap_off + len(comp_logo_tmap)] = comp_logo_tmap
+
+        struct.pack_into('<I', rom, 0x78A98, ptr_logo_tiles)
+        struct.pack_into('<I', rom, 0x78A9C, ptr_logo_tmap)
+
+        with open(rom_path, 'wb') as f:
+            f.write(rom)
+
+        print(f"[SUCCESS] {os.path.basename(rom_path)} compiled with Duel, KANTO JOHTO and guh feriani!")
+
     return True
 
 if __name__ == '__main__':

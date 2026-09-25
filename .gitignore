@@ -13,10 +13,13 @@ roms/Mega Pack Hack Roms Pokémon/
 *.sa2
 *.srm
 *.srm.bak
+*.bak
 *.ss*
 saves/*.sav
 saves/*.srm
 saves/*.srm.bak
+saves/backups/
+roms/backups/
 saves/manifest.json
 
 # Emulator cheats and temporary runtime files
@@ -41,3 +44,5 @@ Thumbs.db
 .idea/
 *.pdb
 tools/HexManiacAdvance/
+tools/love/
+*.exe

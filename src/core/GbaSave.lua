@@ -204,8 +204,11 @@ function GbaSave.syncSaveWithEmulator(gameId)
   local slotPath = GbaSave.getSaveDir() .. "/" .. gameId .. "_" .. activeSlotId .. ".sav"
 
   local candidates = {
+    "roms/Pokemon Kanto Johto.sav",
+    "Pokemon Kanto Johto.sav",
     "roms/Pokemon_Kanto_Johto.sav",
     "Pokemon_Kanto_Johto.sav",
+    "saves/Pokemon Kanto Johto.srm",
     "roms/FireRedDefinitivo.sav",
     "FireRed.sav"
   }

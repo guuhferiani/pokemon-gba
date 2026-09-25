@@ -68,6 +68,8 @@ function GbaRom.scanDirectory(dir)
 
   -- Prioritized search candidates for Kanto & Johto ROM
   local candidates = {
+    "roms/Pokemon Kanto Johto.gba",
+    "Pokemon Kanto Johto.gba",
     "roms/Pokemon_Kanto_Johto.gba",
     "Pokemon_Kanto_Johto.gba",
     "roms/FireRedDefinitivo.gba",

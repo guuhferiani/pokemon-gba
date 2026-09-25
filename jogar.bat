@@ -1,20 +1,34 @@
 @echo off
 cd /d "%~dp0"
-title Pokemon GBA Studio++ (Launcher, Save Editor & Mod Manager)
+title Pokemon GBA Studio++
+
 echo ======================================================================
-echo   Iniciando Pokemon GBA Studio++ (Launcher & Mod Manager)...
+echo   Iniciando Pokemon GBA Studio++...
 echo ======================================================================
 echo.
-echo Recursos:
-echo   - 🕹️ JOGAR: Disparo instantaneo do mGBA integrado com saves sincronizados
-echo   - 🎒 MOCHILA & ITENS: Injetor de Doces Raros, Master Balls, Dinheiro e Dex
-echo   - ✨ SHINYDEX: Scanner em tempo real de Pokemons Shiny capturados
-echo   - 💾 SAVE SLOTS: Alternancia, backup e criacao de slots independentes
-echo   - 🧩 MODS: Traducao PT-BR, Exp. Share Moderno, Correr dentro de casas
+echo   - JOGAR: Disparo instantaneo do mGBA integrado
+echo   - MOCHILA e ITENS: Injetor de Doces Raros, Master Balls e Dex
+echo   - SHINYDEX: Scanner de Pokemons Shiny capturados
+echo   - SAVE SLOTS: Alternancia e backup de slots
 echo.
+
+if exist "%~dp0tools\love\love.exe" (
+    start "" "%~dp0tools\love\love.exe" "%~dp0."
+    exit /b 0
+)
 
 if exist "C:\Program Files\LOVE\love.exe" (
     start "" "C:\Program Files\LOVE\love.exe" "%~dp0."
+    exit /b 0
+)
+
+echo [INFO] LOVE2D nao encontrado. Iniciando diretamente no mGBA integrado...
+echo.
+
+if exist "%~dp0emulator\mGBA.exe" (
+    start "" "%~dp0emulator\mGBA.exe" "%~dp0roms\Pokemon Kanto Johto.gba"
+    exit /b 0
 ) else (
-    start "" love "%~dp0."
+    echo [ERRO] Emulador mGBA nao encontrado em emulator\mGBA.exe!
+    pause
 )

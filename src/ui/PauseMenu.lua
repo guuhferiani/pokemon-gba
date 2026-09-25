@@ -42,6 +42,10 @@ end
 
 function PauseMenu:resolveSavePath()
   local candidates = {
+    "saves/kantojohto_slot1.sav",
+    "roms/Pokemon Kanto Johto.sav",
+    "roms/Pokemon_Kanto_Johto.sav",
+    "saves/Pokemon Kanto Johto.srm",
     "saves/firered_slot1.sav",
     "FireRed.sav",
     "roms/FireRedDefinitivo.sav",
@@ -51,7 +55,7 @@ function PauseMenu:resolveSavePath()
     local f = io.open(cp, "rb")
     if f then f:close() return cp end
   end
-  return "saves/firered_slot1.sav"
+  return "saves/kantojohto_slot1.sav"
 end
 
 function PauseMenu:refreshShinies()
