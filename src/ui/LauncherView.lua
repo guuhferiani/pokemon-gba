@@ -513,26 +513,42 @@ end
 
 function LauncherView.syncSaveData(primarySave, data)
   if not data then return end
-  
+
   if love and love.filesystem then
     love.filesystem.createDirectory(GbaSave.getSaveDir())
   else
     os.execute('mkdir "' .. GbaSave.getSaveDir() .. '" 2>nul')
   end
 
+  -- 1. Slot interno do Studio++
   local slotPath = GbaSave.getSaveDir() .. "/" .. LauncherView.activeGameId .. "_" .. LauncherView.activeSlotId .. ".sav"
   local fSlot = io.open(slotPath, "wb")
   if fSlot then fSlot:write(data) fSlot:close() end
 
+  -- 2. Companion .sav ao lado da ROM (mGBA PC)
   local activeRom = LauncherView.getActiveRom()
   if activeRom and activeRom.displayPath then
     local compSav = activeRom.displayPath:gsub("%.%w+$", ".sav")
-    if compSav ~= primarySave and compSav ~= slotPath then
-      local fComp = io.open(compSav, "wb")
-      if fComp then fComp:write(data) fComp:close() end
+    local fComp = io.open(compSav, "wb")
+    if fComp then fComp:write(data) fComp:close() end
+  end
+
+  -- 3. Todas as localizações conhecidas do mGBA (roms/*.srm e roms/*.sav)
+  -- Necessário porque o mGBA usa o arquivo de disco apenas ao (re)carregar a ROM.
+  local mGBATargets = {
+    "roms/Pokemon_Kanto_Johto.srm",
+    "roms/Pokemon_Kanto_Johto.sav",
+    "roms/Pokemon Kanto Johto.srm",
+    "roms/Pokemon Kanto Johto.sav",
+  }
+  for _, target in ipairs(mGBATargets) do
+    if target ~= primarySave and target ~= slotPath then
+      local fT = io.open(target, "wb")
+      if fT then fT:write(data) fT:close() end
     end
   end
 
+  -- 4. Arquivo primário (caso diferente dos acima)
   if primarySave and primarySave ~= slotPath then
     local fPri = io.open(primarySave, "wb")
     if fPri then fPri:write(data) fPri:close() end
@@ -551,7 +567,7 @@ function LauncherView.injectItem(itemId, quantity, pocket)
       fRead:close()
       LauncherView.syncSaveData(primarySave, data)
     end
-    LauncherView.showToast(tostring(msg))
+    LauncherView.showToast(tostring(msg) .. " — Reabra a ROM no mGBA para ver na mochila.", 5.0)
   else
     LauncherView.showToast(tostring(msg or "Erro ao injetar item."))
   end
