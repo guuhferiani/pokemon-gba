@@ -28,7 +28,6 @@ roms/*.cheats
 roms/*.srm
 roms/*.ss*
 roms/*.cht
-!roms/FireRedDefinitivo.cht
 
 # Logs and crash dumps
 *.log
