@@ -6,6 +6,7 @@ local GbaMods = require("src.core.GbaMods")
 local GameCoverView = require("src.ui.GameCoverView")
 local GbaItemInjector = require("src.core.GbaItemInjector")
 local GbaShinyDex = require("src.core.GbaShinyDex")
+local DexView = require("src.ui.DexView")
 local utf8 = require("utf8")
 
 local function utf8Truncate(str, maxChars)
@@ -32,12 +33,13 @@ end
 
 local LauncherView = {
   activeGameId = "kantojohto",
-  mainView = "game", -- "game" | "mods" | "items" | "shiny"
+  mainView = "game", -- "game" | "mods" | "items" | "shiny" | "dex"
   modsFilter = nil,
   itemsCategory = "all",
   selectedQuantity = 99,
   shinyRate = "default",
   shinyScanResult = nil,
+  dexData = nil,
   discoveredRoms = {},
   slots = {},
   activeSlotId = "slot1",
@@ -870,6 +872,34 @@ function LauncherView.refreshShinies()
   LauncherView.shinyScanResult = { shinies = {}, totalPokemon = 0, totalShinies = 0 }
 end
 
+function LauncherView.refreshDex()
+  local savePath = LauncherView.resolveActiveSavePath()
+  DexView.refresh(savePath)
+  LauncherView.dexData = DexView.dexData
+end
+
+function LauncherView.drawDexPanel(ww, wh, headerH)
+  if not DexView.dexData then
+    LauncherView.refreshDex()
+  end
+
+  local pad = 24
+  local contentY = headerH + 16
+  local contentW = ww - pad * 2
+  local contentH = wh - contentY - 48
+
+  Theme.card(pad, contentY, contentW, contentH)
+
+  -- Botão de atualização no canto superior direito do card
+  if Kit.button("btn_dex_refresh", "🔄 Atualizar", pad + contentW - 85, contentY + 15, 65, 24, { kind = "accent", font = "micro" }) then
+    LauncherView.refreshDex()
+    LauncherView.showToast("Pokédex atualizada do save!")
+  end
+
+  -- Delega o desenho ao componente DexView
+  DexView.draw(pad, contentY, contentW, contentH)
+end
+
 function LauncherView.drawShinyPanel(ww, wh, headerH)
   if not LauncherView.shinyScanResult then
     LauncherView.refreshShinies()
@@ -1105,6 +1135,18 @@ function LauncherView.draw()
     LauncherView.refreshShinies()
   end
 
+  local isDexTab = (LauncherView.mainView == "dex")
+  local dexTabW = 100
+  if Kit.button("tab_dex", "POKÉDEX", tabX + gameTabW + modsTabW + itemsTabW + shinyTabW + 32, tabY, dexTabW, tabH, {
+    kind = "tab",
+    active = isDexTab,
+    accentCol = { 120, 200, 80 },
+    font = "small"
+  }) then
+    LauncherView.mainView = "dex"
+    LauncherView.refreshDex()
+  end
+
   -- Header right actions
   if Kit.button("btn_open_mods_folder", "Pasta Mods", ww - 275, 16, 120, 28, { kind = "primary", font = "small" }) then
     love.system.openURL("file://" .. love.filesystem.getWorkingDirectory() .. "/mods")
@@ -1124,6 +1166,8 @@ function LauncherView.draw()
     LauncherView.drawItemsPanel(ww, wh, headerH)
   elseif LauncherView.mainView == "shiny" then
     LauncherView.drawShinyPanel(ww, wh, headerH)
+  elseif LauncherView.mainView == "dex" then
+    LauncherView.drawDexPanel(ww, wh, headerH)
   else
     LauncherView.drawGamePanel(ww, wh, headerH, game, rom)
   end
@@ -1232,6 +1276,12 @@ end
 
 function LauncherView.mousepressed(x, y, button)
   if button == 1 then Kit.mouseClicked = true end
+end
+
+function LauncherView.wheelmoved(x, y)
+  if LauncherView.mainView == "dex" then
+    DexView.scroll(y)
+  end
 end
 
 function LauncherView.mousereleased(x, y, button)

@@ -86,6 +86,12 @@ function love.keypressed(key)
   LauncherView.keypressed(key)
 end
 
+function love.wheelmoved(x, y)
+  if LauncherView.wheelmoved then
+    LauncherView.wheelmoved(x, y)
+  end
+end
+
 function love.focus(focused)
   if LauncherView.onFocus then
     LauncherView.onFocus(focused)
