@@ -405,11 +405,13 @@ function GbaItemInjector.unlockNationalDex(filepath)
   end
 
   -- 1. Enable National Dex mode in Section 0 (SaveBlock2)
-  bytes[sec0Offset + 0x0017 + 1] = 0xB9 -- Magic Byte (BPRE binary)
-  bytes[sec0Offset + 0x0018 + 1] = 0x01 -- National Dex Order Mode
+  -- In this PT-BR BPRE build, nationalMagic is at SaveBlock2+0x1B (not +0x1A).
+  -- Confirmed by disassembly: LDRB R0,[R0,#0x1B] / CMP R0,#0xB9 in IsNationalPokedexEnabled.
+  bytes[sec0Offset + 0x0018 + 1] = 0x01 -- pokedex.order
+  bytes[sec0Offset + 0x0019 + 1] = 0x01 -- pokedex.mode (has Pokedex)
   bytes[sec0Offset + 0x0019 + 1] = 0x01 -- Has Pokédex
-  bytes[sec0Offset + 0x001A + 1] = 0xB9 -- National Magic Byte (0xB9 oficial para FireRed/LeafGreen)
-  bytes[sec0Offset + 0x001B + 1] = 0x02 -- Has National Dex Mode (2 = Full National Dex)
+  bytes[sec0Offset + 0x001A + 1] = 0x01 -- dex mode flag
+  bytes[sec0Offset + 0x001B + 1] = 0xB9 -- nationalMagic = 0xB9 (CORRECT offset for this ROM)
   -- NOTE: Owned/Seen bitmaps (0x28, 0x5C, 0x90, 0xC4) are intentionally NOT modified.
   -- The player's real captured Pokémon data from gameplay is preserved exactly as-is.
 

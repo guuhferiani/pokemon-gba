@@ -623,15 +623,18 @@ def compile_engine():
         # ------------------------------------------------------------------
         # 8. ASM PATCH: NATIONAL DEX ALWAYS ON (IsNationalPokedexEnabled -> always 1)
         # ------------------------------------------------------------------
-        # In FireRed BPRE v1.0, the function IsNationalPokedexEnabled lives at 0x06DC04.
-        # It reads SaveBlock2+0x1A and checks for the magic byte 0xB9.
-        # We overwrite it with THUMB: MOV R0, #1 / BX LR (4 bytes total).
-        # This makes the National Dex UI always active for ANY save, including new games on Android.
-        # Original bytes: 10 B5 02 48 00 78 B0 28 ...
-        # New bytes:      01 20 70 47
-        #   01 20 = MOV R0, #1  (sets return value = true)
-        #   70 47 = BX LR       (return)
-        NAT_DEX_PATCH_OFFSET = 0x06DC04
+        # IsNationalPokedexEnabled is at ROM offset 0x06E25C (BPRE PT-BR).
+        # Confirmed by disassembly: PUSH {LR} / LDR R0,=0x0300500C / LDR R0,[R0]
+        #   / LDRB R0,[R0,#0x1B] / CMP R0,#0xB9 / ...
+        # Patch: overwrite with MOV R0,#1 / BX LR (4 bytes, replaces PUSH+LDR pool ref).
+        # This makes the National Dex UI always active for ANY save (Android compatible).
+        # Previous wrong patch at 0x6DC04 is restored to NOP sequence (no-op MOV R1,R1).
+        WRONG_PATCH_OFFSET = 0x06DC04
+        f.seek(WRONG_PATCH_OFFSET)
+        f.write(bytes([0x09, 0x1C, 0x09, 0x1C]))  # MOV R1,R1 / MOV R1,R1 (harmless NOPs)
+        print(f"  [FIX] Wrong patch at {hex(WRONG_PATCH_OFFSET)} restored to NOPs")
+
+        NAT_DEX_PATCH_OFFSET = 0x06E25C
         f.seek(NAT_DEX_PATCH_OFFSET)
         f.write(bytes([0x01, 0x20, 0x70, 0x47]))
         print(f"  [ASM] IsNationalPokedexEnabled at {hex(NAT_DEX_PATCH_OFFSET)} patched: National Dex always ON!")
