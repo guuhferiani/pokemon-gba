@@ -9,7 +9,7 @@ Full Engineering Compiler:
  5. Johto Map Banks & Overworld Routing (Bank 43 & Bank 44)
  6. High-Level Johto Wild Encounters Table (Lv 55 to 95)
  7. Modern QoL Engine (Run Indoors & Physical/Special Split)
- 8. ASM Patch for National Dex & Evolution Blocker Removal
+ 8. ASM Patch: IsNationalPokedexEnabled always returns 1 (National Dex always ON in ROM)
 """
 
 import os
@@ -621,7 +621,24 @@ def compile_engine():
         print(f"  [QoL] Physical/Special Split table compiled at {hex(SPLIT_TABLE_OFF)}")
 
         # ------------------------------------------------------------------
-        # 7. ASM PATCH: EVOLUTION TRAVA REMOVAL
+        # 8. ASM PATCH: NATIONAL DEX ALWAYS ON (IsNationalPokedexEnabled -> always 1)
+        # ------------------------------------------------------------------
+        # In FireRed BPRE v1.0, the function IsNationalPokedexEnabled lives at 0x06DC04.
+        # It reads SaveBlock2+0x1A and checks for the magic byte 0xB9.
+        # We overwrite it with THUMB: MOV R0, #1 / BX LR (4 bytes total).
+        # This makes the National Dex UI always active for ANY save, including new games on Android.
+        # Original bytes: 10 B5 02 48 00 78 B0 28 ...
+        # New bytes:      01 20 70 47
+        #   01 20 = MOV R0, #1  (sets return value = true)
+        #   70 47 = BX LR       (return)
+        NAT_DEX_PATCH_OFFSET = 0x06DC04
+        f.seek(NAT_DEX_PATCH_OFFSET)
+        f.write(bytes([0x01, 0x20, 0x70, 0x47]))
+        print(f"  [ASM] IsNationalPokedexEnabled at {hex(NAT_DEX_PATCH_OFFSET)} patched: National Dex always ON!")
+
+
+        # ------------------------------------------------------------------
+        # 9. ASM PATCH: EVOLUTION BLOCKER REMOVAL
         # ------------------------------------------------------------------
         EVO_PATCH_OFFSET = 0x0ce818
         f.seek(EVO_PATCH_OFFSET)
