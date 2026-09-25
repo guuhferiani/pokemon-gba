@@ -381,7 +381,7 @@ function GbaItemInjector.injectMoney(filepath, amount)
   return true, string.format("Dinheiro atualizado para $%d PokéDollars!", amount)
 end
 
--- Unlock National Pokedex in Save (All 251 / 386 Pokémon entries visible)
+-- Unlock National Pokedex mode in Save (enables National Dex UI, preserves real capture data)
 function GbaItemInjector.unlockNationalDex(filepath)
   local f = io.open(filepath, "rb")
   if not f then return false, "Não foi possível abrir o save." end
@@ -404,21 +404,14 @@ function GbaItemInjector.unlockNationalDex(filepath)
     return false, "Estrutura do save não encontrada."
   end
 
-  -- 1. Enable National Dex in Section 0 (SaveBlock2)
+  -- 1. Enable National Dex mode in Section 0 (SaveBlock2)
   bytes[sec0Offset + 0x0017 + 1] = 0xB9 -- Magic Byte (BPRE binary)
   bytes[sec0Offset + 0x0018 + 1] = 0x01 -- National Dex Order Mode
   bytes[sec0Offset + 0x0019 + 1] = 0x01 -- Has Pokédex
   bytes[sec0Offset + 0x001A + 1] = 0xB9 -- National Magic Byte (0xB9 oficial para FireRed/LeafGreen)
   bytes[sec0Offset + 0x001B + 1] = 0x02 -- Has National Dex Mode (2 = Full National Dex)
-
-  -- Mark all 386 Pokémon as Owned (0x28..0x58, 49 bytes) and Seen (0x5C, 0x90, 0xC4)
-  for b = 0, 48 do
-    local val = (b == 48) and 0x03 or 0xFF
-    bytes[sec0Offset + 0x0028 + b + 1] = val -- owned
-    bytes[sec0Offset + 0x005C + b + 1] = val -- seenA
-    bytes[sec0Offset + 0x0090 + b + 1] = val -- seenB
-    bytes[sec0Offset + 0x00C4 + b + 1] = val -- seenC
-  end
+  -- NOTE: Owned/Seen bitmaps (0x28, 0x5C, 0x90, 0xC4) are intentionally NOT modified.
+  -- The player's real captured Pokémon data from gameplay is preserved exactly as-is.
 
   -- 2. Set National Dex Flags in Section 1 (Offset +0x0EE0 & Offset +0x0E5C)
   local binaryFlagByte = sec1Offset + 0x0E5C + 1
@@ -464,7 +457,7 @@ function GbaItemInjector.unlockNationalDex(filepath)
   wf:write(table.concat(outStr))
   wf:close()
 
-  return true, "Pokédex Nacional (386 Pokémon) 100% registrada e desbloqueada com sucesso!"
+  return true, "Pokédex Nacional desbloqueada! Seus Pokémon capturados foram preservados."
 end
 
 -- Fast-Forward Test Tool: Unlocks Kanto Champion, 8 Badges, S.S. Ticket and Johto access
