@@ -15,7 +15,7 @@ Full Engineering Compiler:
 import os
 import struct
 
-ROM_PATH = os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon_Kanto_Johto.gba")
+ROM_PATH = os.path.join(os.path.dirname(__file__), "..", "roms", "Pokemon Kanto Johto.gba")
 ROM_SIZE = 33554432 # 32 MB
 
 # PT-BR Charset Map matching BPRE v1.0 Brazilian translation
