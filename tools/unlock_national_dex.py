@@ -82,8 +82,8 @@ def upgrade_save_file(filepath, mark_all_caught=False):
         # 1. Section 0 (SaveBlock2): Pokédex structure
         data[sec0 + 0x0018] = 0x01 # order
         data[sec0 + 0x0019] = 0x01 # mode: has pokedex
-        data[sec0 + 0x001A] = 0xB9 # nationalMagic (0xB9 triggers IsNationalPokedexEnabled!)
-        data[sec0 + 0x001B] = 0x02 # national dex mode unlocked
+        data[sec0 + 0x001A] = 0x01 # dex mode flag
+        data[sec0 + 0x001B] = 0xB9 # nationalMagic (0xB9 triggers IsNationalPokedexEnabled in this PT-BR build!)
 
         # Also register Poochyena (#261) as seen and caught if not already
         # Bit index for #261 in dex (1-based: 261 -> 0-based: 260)
