@@ -660,7 +660,19 @@ def compile_engine():
         print(f"  [FIX] Evolution scene loop at {hex(EVO_RESTORE_OFFSET)} restored to original instructions.")
 
         # ------------------------------------------------------------------
-        # 8. METADATA STAMP
+        # 11. GBA HEADER COMPLEMENT CHECKSUM FIX (0xBD)
+        # ------------------------------------------------------------------
+        # Strict Android emulators (RetroArch, Pizza Boy) and flashcarts verify
+        # the header complement byte at 0xBD: -(sum(0xA0..0xBC) + 0x19) & 0xFF.
+        f.seek(0xA0)
+        hdr_data = f.read(0x1D)
+        chk = -(sum(hdr_data) + 0x19) & 0xFF
+        f.seek(0xBD)
+        f.write(bytes([chk]))
+        print(f"  [HEADER] GBA header checksum complement at 0xBD updated to {hex(chk)} (clean boot on Android/hardware)")
+
+        # ------------------------------------------------------------------
+        # 12. METADATA STAMP
         # ------------------------------------------------------------------
         f.seek(0x019A0000)
         stamp = b"POKEMON KANTO & JOHTO DEFINITIVO 32MB - COMPLETE FULL ENGINE COMPILED OK"
