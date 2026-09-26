@@ -594,9 +594,11 @@ def compile_engine():
         # 6. PASSO 3: MODERN QoL ENGINE (Run Indoors & Move Split)
         # ------------------------------------------------------------------
         # Run Indoors Patch at 0x0bd494
+        # Changes 'ANDS R0, R1; CMP R0, #0' (08 40 00 28) to 'ANDS R0, R0; CMP R0, #0' (00 40 00 28).
+        # Since R0=2, R0&R0=2 != 0, so the BEQ check disallowing running indoors is bypassed cleanly.
         f.seek(0xbd494)
-        f.write(bytes([0x00, 0x00, 0x00, 0x00])) # NOP out check
-        print(f"  [QoL] Run Indoors patch applied at 0xbd494 (B-button running inside all buildings!)")
+        f.write(bytes([0x00, 0x40, 0x00, 0x28]))
+        print(f"  [QoL] Run Indoors patch applied cleanly at 0xbd494 (B-button running inside all buildings!)")
 
         # Physical / Special Split Table at 0x01990000
         # 0 = Physical, 1 = Special, 2 = Status
@@ -621,32 +623,41 @@ def compile_engine():
         print(f"  [QoL] Physical/Special Split table compiled at {hex(SPLIT_TABLE_OFF)}")
 
         # ------------------------------------------------------------------
-        # 8. ASM PATCH: NATIONAL DEX ALWAYS ON (IsNationalPokedexEnabled -> always 1)
+        # 8. ASM PATCH: RESTORE BUILDING EXIT WARP HANDLER (0x06DC04)
+        # ------------------------------------------------------------------
+        # In FireRed BPRE, 0x06DC04 is inside CheckDirectionalWarp (0x06DBD8):
+        # 0x06DC04 is 'B 0x06DC22' (branch after checking Southward door mat warp 0x64),
+        # followed at 0x06DC06 by 'LSL R0, R0, #24' (first op of Northward warp check).
+        # Corrupting this with NOPs caused downward movement onto door mats to fall through
+        # and fail warp detection, making it impossible to exit buildings.
+        # Restoring exact original bytes: 0D E0 00 06
+        WARP_CHECK_OFFSET = 0x06DC04
+        f.seek(WARP_CHECK_OFFSET)
+        f.write(bytes([0x0D, 0xE0, 0x00, 0x06]))
+        print(f"  [FIX] Building exit warp handler at {hex(WARP_CHECK_OFFSET)} restored (exiting buildings fixed!)")
+
+        # ------------------------------------------------------------------
+        # 9. ASM PATCH: NATIONAL DEX ALWAYS ON (IsNationalPokedexEnabled -> always 1)
         # ------------------------------------------------------------------
         # IsNationalPokedexEnabled is at ROM offset 0x06E25C (BPRE PT-BR).
-        # Confirmed by disassembly: PUSH {LR} / LDR R0,=0x0300500C / LDR R0,[R0]
-        #   / LDRB R0,[R0,#0x1B] / CMP R0,#0xB9 / ...
-        # Patch: overwrite with MOV R0,#1 / BX LR (4 bytes, replaces PUSH+LDR pool ref).
+        # Overwrite with MOV R0,#1 / BX LR (4 bytes).
         # This makes the National Dex UI always active for ANY save (Android compatible).
-        # Previous wrong patch at 0x6DC04 is restored to NOP sequence (no-op MOV R1,R1).
-        WRONG_PATCH_OFFSET = 0x06DC04
-        f.seek(WRONG_PATCH_OFFSET)
-        f.write(bytes([0x09, 0x1C, 0x09, 0x1C]))  # MOV R1,R1 / MOV R1,R1 (harmless NOPs)
-        print(f"  [FIX] Wrong patch at {hex(WRONG_PATCH_OFFSET)} restored to NOPs")
-
         NAT_DEX_PATCH_OFFSET = 0x06E25C
         f.seek(NAT_DEX_PATCH_OFFSET)
         f.write(bytes([0x01, 0x20, 0x70, 0x47]))
         print(f"  [ASM] IsNationalPokedexEnabled at {hex(NAT_DEX_PATCH_OFFSET)} patched: National Dex always ON!")
 
-
         # ------------------------------------------------------------------
-        # 9. ASM PATCH: EVOLUTION BLOCKER REMOVAL
+        # 10. ASM PATCH: RESTORE EVOLUTION SCENE CODE (0x0CE818)
         # ------------------------------------------------------------------
-        EVO_PATCH_OFFSET = 0x0ce818
-        f.seek(EVO_PATCH_OFFSET)
-        f.write(bytes([0x01, 0x20, 0x00, 0x00]))
-        print(f"  [ASM] Evolution check at {hex(EVO_PATCH_OFFSET)} patched: Free Johto evolutions unlocked!")
+        # 0x0CE818 was incorrectly patched (it is inside a loop in 0x0CE748 called by evolution scene).
+        # Because IsNationalPokedexEnabled at 0x06E25C already returns 1, the National Dex evolution
+        # lock in FireRed never blocks evolutions.
+        # Restoring original bytes: 6A 46 71 F7 (MOV R2, SP / BL 0x04037C).
+        EVO_RESTORE_OFFSET = 0x0CE818
+        f.seek(EVO_RESTORE_OFFSET)
+        f.write(bytes([0x6A, 0x46, 0x71, 0xF7]))
+        print(f"  [FIX] Evolution scene loop at {hex(EVO_RESTORE_OFFSET)} restored to original instructions.")
 
         # ------------------------------------------------------------------
         # 8. METADATA STAMP
