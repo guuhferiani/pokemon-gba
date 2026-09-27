@@ -297,17 +297,116 @@ def compile_engine():
         print(f"  [TRAINERS] Repointed {len(CODE_REFS)} references to new table pointer {hex(NEW_TRAINER_TBL_PTR)}")
 
         # ------------------------------------------------------------------
-        # 3. VERMILION PORT SAILOR S.S. AQUA SCRIPT (Offset 0x01830000)
         # ------------------------------------------------------------------
-        SCRIPT_ALLOC = 0x01830000
-        f.seek(SCRIPT_ALLOC)
+        # 3. STORY & TRANSITION SYSTEM: KANTO <-> JOHTO FULL NARRATIVE ENGINE
+        # ------------------------------------------------------------------
+        # Flags used:
+        #  0x082C: FLAG_SYS_GAME_CLEAR (Player beat Blue and entered Hall of Fame)
+        #  0x0281: FLAG_OAK_AUTHORIZED_JOHTO (Oak gives official international travel permit)
+        #  0x0829: FLAG_SYS_NATIONAL_DEX (National Dex unlocked)
+        #  0x082A: FLAG_SYS_POKEDEX_GET (Pokedex flag)
 
-        # Dialogues in 100% PT-BR
+        # A. SCRIPT 1: PROFESSOR OAK'S LAB POST-GAME EVENT (Offset 0x01831000)
+        # When player talks to Prof. Oak after Hall of Fame, Oak congratulates the Champion,
+        # informs about Elm's call regarding Team Rocket in Johto, grants the travel permit (0x0281),
+        # and directs player to the S.S. Aqua at Vermilion Port!
+        OAK_SCRIPT_ALLOC = 0x01831000
+        cur_oak_str_off = OAK_SCRIPT_ALLOC + 0x180
+
+        txt_oak_first = encode_gen3(
+            "Parabéns pela magnífica vitória na Liga Índigo!\\p"
+            "Você provou ser o maior treinador de Kanto!\\p"
+            "No entanto, recebi uma mensagem urgente do meu amigo,\\l"
+            "o Professor Elm da região de Johto.\\p"
+            "Ele relatou que remanescentes da Equipe Rocket\\l"
+            "estão tentando se reerguer por lá!\\p"
+            "Johto precisa da liderança de um verdadeiro Campeão.\\p"
+            "Tome esta autorização oficial para o navio S.S. Aqua!"
+        )
+        txt_oak_conclude = encode_gen3(
+            "O navio S.S. Aqua já está abastecido no Porto\\l"
+            "de Vermilion City!\\p"
+            "Vá até lá e embarque rumo a Johto!\\p"
+            "Que o vento de novos horizontes guie você\\l"
+            "e sua valorosa equipe Pokémon!"
+        )
+        txt_oak_reminder = encode_gen3(
+            "Olá, Campeão! O navio S.S. Aqua aguarda no cais\\l"
+            "do Porto de Vermilion City.\\p"
+            "Boa sorte em sua nova jornada por Johto!"
+        )
+
+        ptr_oak_first = 0x08000000 + cur_oak_str_off
+        f.seek(cur_oak_str_off); f.write(txt_oak_first); cur_oak_str_off += len(txt_oak_first)
+        if cur_oak_str_off % 4 != 0: cur_oak_str_off += (4 - (cur_oak_str_off % 4))
+
+        ptr_oak_conclude = 0x08000000 + cur_oak_str_off
+        f.seek(cur_oak_str_off); f.write(txt_oak_conclude); cur_oak_str_off += len(txt_oak_conclude)
+        if cur_oak_str_off % 4 != 0: cur_oak_str_off += (4 - (cur_oak_str_off % 4))
+
+        ptr_oak_reminder = 0x08000000 + cur_oak_str_off
+        f.seek(cur_oak_str_off); f.write(txt_oak_reminder); cur_oak_str_off += len(txt_oak_reminder)
+        if cur_oak_str_off % 4 != 0: cur_oak_str_off += (4 - (cur_oak_str_off % 4))
+
+        ptr_oak_script_start = 0x08000000 + OAK_SCRIPT_ALLOC
+        ptr_oak_reminder_branch = ptr_oak_script_start + 0x30
+
+        oak_script_data = bytearray()
+        oak_script_data.extend([0x6A]) # lock
+        oak_script_data.extend([0x5A]) # faceplayer
+        oak_script_data.extend([0x2B, 0x81, 0x02]) # checkflag 0x0281 (FLAG_OAK_AUTHORIZED_JOHTO)
+        oak_script_data.extend([0x06, 0x01]) # goto_if_eq
+        oak_script_data.extend(struct.pack('<I', ptr_oak_reminder_branch))
+
+        # First time meeting Oak as Champion:
+        oak_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        oak_script_data.extend(struct.pack('<I', ptr_oak_first))
+        oak_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        oak_script_data.extend([0x6C, 0x02]) # waitmsg
+        oak_script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A (Obtain fanfare)
+        oak_script_data.extend([0x31]) # waitfanfare
+        oak_script_data.extend([0x29, 0x81, 0x02]) # setflag 0x0281 (FLAG_OAK_AUTHORIZED_JOHTO)
+        oak_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        oak_script_data.extend(struct.pack('<I', ptr_oak_conclude))
+        oak_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        oak_script_data.extend([0x6C, 0x02]) # waitmsg
+        oak_script_data.extend([0x6B]) # release
+        oak_script_data.extend([0x02]) # end
+
+        while len(oak_script_data) < 0x30: oak_script_data.append(0x00)
+
+        # Reminder branch (already authorized):
+        oak_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        oak_script_data.extend(struct.pack('<I', ptr_oak_reminder))
+        oak_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        oak_script_data.extend([0x6C, 0x02]) # waitmsg
+        oak_script_data.extend([0x6B]) # release
+        oak_script_data.extend([0x02]) # end
+
+        f.seek(OAK_SCRIPT_ALLOC)
+        f.write(oak_script_data)
+        print(f"  [EVENT] Oak Johto Authorization script written at {hex(OAK_SCRIPT_ALLOC)}")
+
+        # Hook Oak's post-game branch in Oak's Lab (offset 0x1695bb in ROM)
+        f.seek(0x1695bb)
+        f.write(struct.pack('<I', ptr_oak_script_start))
+        print(f"  [HOOK] Hooked Oak post-game dialog (0x1695bb) -> {hex(ptr_oak_script_start)}")
+
+        # B. SCRIPT 2: VERMILION PORT SAILOR S.S. AQUA SCRIPT (Offset 0x01830000)
+        VERMILION_SCRIPT_ALLOC = 0x01830000
+        cur_verm_str_off = VERMILION_SCRIPT_ALLOC + 0x180
+
         txt_not_champ = encode_gen3(
             "Olá! O navio S.S. Aqua está em preparação.\\p"
-            "Apenas o Campeão da Liga Índigo com o bilhete especial\\l"
+            "Apenas o Campeão da Liga Índigo com a autorização oficial\\l"
             "do Professor Carvalho tem permissão para embarcar\\l"
             "em viagens internacionais rumo a Johto!"
+        )
+        txt_need_oak = encode_gen3(
+            "Saudações, Campeão da Liga Índigo!\\p"
+            "Para zarpar no navio S.S. Aqua rumo a Johto,\\l"
+            "o Professor Carvalho precisa primeiro assinar sua\\l"
+            "autorização de viagem em seu laboratório em Pallet Town!"
         )
         txt_ask_embark = encode_gen3(
             "Saudações, Campeão da Liga Índigo!\\p"
@@ -322,87 +421,326 @@ def compile_engine():
         )
         txt_depart = encode_gen3(
             "Excelente! Todos a bordo do navio S.S. Aqua!\\p"
-            "Próxima parada: New Bark Town, Região de Johto!"
+            "Destino: New Bark Town, Região de Johto!"
         )
 
-        cur_str_off = SCRIPT_ALLOC + 0x200
-        ptr_not_champ = 0x08000000 + cur_str_off
-        f.seek(cur_str_off); f.write(txt_not_champ); cur_str_off += len(txt_not_champ)
-        if cur_str_off % 4 != 0: cur_str_off += (4 - (cur_str_off % 4))
+        ptr_not_champ = 0x08000000 + cur_verm_str_off
+        f.seek(cur_verm_str_off); f.write(txt_not_champ); cur_verm_str_off += len(txt_not_champ)
+        if cur_verm_str_off % 4 != 0: cur_verm_str_off += (4 - (cur_verm_str_off % 4))
 
-        ptr_ask_embark = 0x08000000 + cur_str_off
-        f.seek(cur_str_off); f.write(txt_ask_embark); cur_str_off += len(txt_ask_embark)
-        if cur_str_off % 4 != 0: cur_str_off += (4 - (cur_str_off % 4))
+        ptr_need_oak = 0x08000000 + cur_verm_str_off
+        f.seek(cur_verm_str_off); f.write(txt_need_oak); cur_verm_str_off += len(txt_need_oak)
+        if cur_verm_str_off % 4 != 0: cur_verm_str_off += (4 - (cur_verm_str_off % 4))
 
-        ptr_refuse = 0x08000000 + cur_str_off
-        f.seek(cur_str_off); f.write(txt_refuse); cur_str_off += len(txt_refuse)
-        if cur_str_off % 4 != 0: cur_str_off += (4 - (cur_str_off % 4))
+        ptr_ask_embark = 0x08000000 + cur_verm_str_off
+        f.seek(cur_verm_str_off); f.write(txt_ask_embark); cur_verm_str_off += len(txt_ask_embark)
+        if cur_verm_str_off % 4 != 0: cur_verm_str_off += (4 - (cur_verm_str_off % 4))
 
-        ptr_depart = 0x08000000 + cur_str_off
-        f.seek(cur_str_off); f.write(txt_depart); cur_str_off += len(txt_depart)
-        if cur_str_off % 4 != 0: cur_str_off += (4 - (cur_str_off % 4))
+        ptr_refuse = 0x08000000 + cur_verm_str_off
+        f.seek(cur_verm_str_off); f.write(txt_refuse); cur_verm_str_off += len(txt_refuse)
+        if cur_verm_str_off % 4 != 0: cur_verm_str_off += (4 - (cur_verm_str_off % 4))
 
-        ptr_script_start = 0x08000000 + SCRIPT_ALLOC
-        ptr_champion_branch = ptr_script_start + 0x20
-        ptr_embark_yes = ptr_champion_branch + 0x24
+        ptr_depart = 0x08000000 + cur_verm_str_off
+        f.seek(cur_verm_str_off); f.write(txt_depart); cur_verm_str_off += len(txt_depart)
+        if cur_verm_str_off % 4 != 0: cur_verm_str_off += (4 - (cur_verm_str_off % 4))
 
-        script_data = bytearray()
-        script_data.extend([0x6A]) # lock
-        script_data.extend([0x5A]) # faceplayer
-        script_data.extend([0x21, 0x2C, 0x08]) # checkflag 0x082C (Hall of Fame)
-        script_data.extend([0x06, 0x01]) # goto_if_eq
-        script_data.extend(struct.pack('<I', ptr_champion_branch))
+        ptr_verm_script_start = 0x08000000 + VERMILION_SCRIPT_ALLOC
+        ptr_champ_check_oak = ptr_verm_script_start + 0x24
+        ptr_authorized_branch = ptr_champ_check_oak + 0x24
+        ptr_embark_yes = ptr_authorized_branch + 0x24
+
+        verm_script_data = bytearray()
+        verm_script_data.extend([0x6A]) # lock
+        verm_script_data.extend([0x5A]) # faceplayer
+        verm_script_data.extend([0x2B, 0x2C, 0x08]) # checkflag 0x082C (Hall of Fame)
+        verm_script_data.extend([0x06, 0x01]) # goto_if_eq
+        verm_script_data.extend(struct.pack('<I', ptr_champ_check_oak))
 
         # Not champion:
-        script_data.extend([0x0F, 0x00]) # loadpointer 0
-        script_data.extend(struct.pack('<I', ptr_not_champ))
-        script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
-        script_data.extend([0x6C, 0x02]) # waitmsg
-        script_data.extend([0x6B]) # release
-        script_data.extend([0x02]) # end
+        verm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        verm_script_data.extend(struct.pack('<I', ptr_not_champ))
+        verm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        verm_script_data.extend([0x6C, 0x02]) # waitmsg
+        verm_script_data.extend([0x6B]) # release
+        verm_script_data.extend([0x02]) # end
 
-        while len(script_data) < 0x20: script_data.append(0x00)
+        while len(verm_script_data) < 0x24: verm_script_data.append(0x00)
 
-        # Champion branch:
-        script_data.extend([0x0F, 0x00])
-        script_data.extend(struct.pack('<I', ptr_ask_embark))
-        script_data.extend([0x09, 0x05]) # callstd MSG_YESNO
-        script_data.extend([0x21, 0x0D, 0x80, 0x01, 0x00]) # compare VAR_RESULT, 1
-        script_data.extend([0x06, 0x01]) # goto_if_eq
-        script_data.extend(struct.pack('<I', ptr_embark_yes))
+        # Champion branch -> check if Oak gave authorization:
+        verm_script_data.extend([0x2B, 0x81, 0x02]) # checkflag 0x0281 (FLAG_OAK_AUTHORIZED_JOHTO)
+        verm_script_data.extend([0x06, 0x01]) # goto_if_eq
+        verm_script_data.extend(struct.pack('<I', ptr_authorized_branch))
+
+        # Champion, but not authorized by Oak yet:
+        verm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        verm_script_data.extend(struct.pack('<I', ptr_need_oak))
+        verm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        verm_script_data.extend([0x6C, 0x02]) # waitmsg
+        verm_script_data.extend([0x6B]) # release
+        verm_script_data.extend([0x02]) # end
+
+        while len(verm_script_data) < 0x48: verm_script_data.append(0x00)
+
+        # Authorized branch -> Ask embark (YES/NO):
+        verm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        verm_script_data.extend(struct.pack('<I', ptr_ask_embark))
+        verm_script_data.extend([0x09, 0x05]) # callstd MSG_YESNO
+        verm_script_data.extend([0x21, 0x0D, 0x80, 0x01, 0x00]) # compare VAR_RESULT, 1
+        verm_script_data.extend([0x06, 0x01]) # goto_if_eq
+        verm_script_data.extend(struct.pack('<I', ptr_embark_yes))
 
         # Embark NO (refuse):
-        script_data.extend([0x0F, 0x00])
-        script_data.extend(struct.pack('<I', ptr_refuse))
-        script_data.extend([0x09, 0x04])
-        script_data.extend([0x6C, 0x02])
-        script_data.extend([0x6B])
-        script_data.extend([0x02])
+        verm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        verm_script_data.extend(struct.pack('<I', ptr_refuse))
+        verm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        verm_script_data.extend([0x6C, 0x02]) # waitmsg
+        verm_script_data.extend([0x6B]) # release
+        verm_script_data.extend([0x02]) # end
 
-        while len(script_data) < 0x44: script_data.append(0x00)
+        while len(verm_script_data) < 0x6C: verm_script_data.append(0x00)
 
         # Embark YES (Depart):
-        script_data.extend([0x0F, 0x00])
-        script_data.extend(struct.pack('<I', ptr_depart))
-        script_data.extend([0x09, 0x04])
-        script_data.extend([0x6C, 0x02])
-        script_data.extend([0x29, 0x29, 0x08]) # setflag 0x0829 (FLAG_SYS_NATIONAL_DEX)
-        script_data.extend([0x29, 0x2A, 0x08]) # setflag 0x082A (FLAG_SYS_POKEDEX_GET)
-        script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A
-        script_data.extend([0x31]) # waitfanfare
-        # Warp to Johto Ferry Arrival Dock (Bank 3, Map 48, warp 0, x=11, y=8)
-        script_data.extend([0x39, 0x03, 0x30, 0x00, 0x0B, 0x00, 0x08, 0x00])
-        script_data.extend([0x6B]) # release
-        script_data.extend([0x02]) # end
+        verm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        verm_script_data.extend(struct.pack('<I', ptr_depart))
+        verm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        verm_script_data.extend([0x6C, 0x02]) # waitmsg
+        verm_script_data.extend([0x5C, 0x00]) # fadescreen 0 (fade black)
+        verm_script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A
+        verm_script_data.extend([0x31]) # waitfanfare
+        verm_script_data.extend([0x29, 0x29, 0x08]) # setflag 0x0829 (FLAG_SYS_NATIONAL_DEX)
+        verm_script_data.extend([0x29, 0x2A, 0x08]) # setflag 0x082A (FLAG_SYS_POKEDEX_GET)
+        # Warp to Johto New Bark Town arrival dock: Bank 43 (0x2B), Map 0, Warp 0xFF, x=11, y=10
+        verm_script_data.extend([0x39, 0x2B, 0x00, 0xFF, 0x0B, 0x00, 0x0A, 0x00])
+        verm_script_data.extend([0x27]) # waitstate
+        verm_script_data.extend([0x6B]) # release
+        verm_script_data.extend([0x02]) # end
 
-        f.seek(SCRIPT_ALLOC)
-        f.write(script_data)
-        print(f"  [EVENT] Vermilion S.S. Aqua script written at {hex(SCRIPT_ALLOC)}")
+        f.seek(VERMILION_SCRIPT_ALLOC)
+        f.write(verm_script_data)
+        print(f"  [EVENT] Vermilion S.S. Aqua script written at {hex(VERMILION_SCRIPT_ALLOC)}")
 
-        # Hook the Sailor NPC Object in Vermilion City Port Entrance (offset 0x3b5538)
+        # Hook the Sailor NPC in Vermilion City Port Entrance (offset 0x3b5538 in ROM)
         f.seek(0x3b5538)
-        f.write(struct.pack('<I', ptr_script_start))
-        print(f"  [HOOK] Hooked Vermilion City sailor NPC (0x3b5538) -> {hex(ptr_script_start)}")
+        f.write(struct.pack('<I', ptr_verm_script_start))
+        print(f"  [HOOK] Hooked Vermilion City sailor NPC (0x3b5538) -> {hex(ptr_verm_script_start)}")
+
+        # C. SCRIPT 3: JOHTO NEW BARK TOWN RETURN SAILOR SCRIPT (Offset 0x01832000)
+        JOHTO_SAILOR_ALLOC = 0x01832000
+        cur_jsail_str_off = JOHTO_SAILOR_ALLOC + 0x120
+
+        txt_ask_return = encode_gen3(
+            "Olá, Campeão! Este é o cais do S.S. Aqua em Johto.\\p"
+            "Deseja retornar ao Porto de Vermilion em Kanto agora mesmo?"
+        )
+        txt_return_no = encode_gen3(
+            "Muito bem! Aproveite sua jornada pela bela região de Johto!"
+        )
+        txt_return_yes = encode_gen3(
+            "Todos a bordo! Retornando ao Porto de Vermilion em Kanto!"
+        )
+
+        ptr_ask_return = 0x08000000 + cur_jsail_str_off
+        f.seek(cur_jsail_str_off); f.write(txt_ask_return); cur_jsail_str_off += len(txt_ask_return)
+        if cur_jsail_str_off % 4 != 0: cur_jsail_str_off += (4 - (cur_jsail_str_off % 4))
+
+        ptr_return_no = 0x08000000 + cur_jsail_str_off
+        f.seek(cur_jsail_str_off); f.write(txt_return_no); cur_jsail_str_off += len(txt_return_no)
+        if cur_jsail_str_off % 4 != 0: cur_jsail_str_off += (4 - (cur_jsail_str_off % 4))
+
+        ptr_return_yes = 0x08000000 + cur_jsail_str_off
+        f.seek(cur_jsail_str_off); f.write(txt_return_yes); cur_jsail_str_off += len(txt_return_yes)
+        if cur_jsail_str_off % 4 != 0: cur_jsail_str_off += (4 - (cur_jsail_str_off % 4))
+
+        ptr_jsail_script_start = 0x08000000 + JOHTO_SAILOR_ALLOC
+        ptr_return_yes_branch = ptr_jsail_script_start + 0x28
+
+        jsail_script_data = bytearray()
+        jsail_script_data.extend([0x6A]) # lock
+        jsail_script_data.extend([0x5A]) # faceplayer
+        jsail_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        jsail_script_data.extend(struct.pack('<I', ptr_ask_return))
+        jsail_script_data.extend([0x09, 0x05]) # callstd MSG_YESNO
+        jsail_script_data.extend([0x21, 0x0D, 0x80, 0x01, 0x00]) # compare VAR_RESULT, 1
+        jsail_script_data.extend([0x06, 0x01]) # goto_if_eq
+        jsail_script_data.extend(struct.pack('<I', ptr_return_yes_branch))
+
+        # Return NO:
+        jsail_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        jsail_script_data.extend(struct.pack('<I', ptr_return_no))
+        jsail_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        jsail_script_data.extend([0x6C, 0x02]) # waitmsg
+        jsail_script_data.extend([0x6B]) # release
+        jsail_script_data.extend([0x02]) # end
+
+        while len(jsail_script_data) < 0x28: jsail_script_data.append(0x00)
+
+        # Return YES:
+        jsail_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        jsail_script_data.extend(struct.pack('<I', ptr_return_yes))
+        jsail_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        jsail_script_data.extend([0x6C, 0x02]) # waitmsg
+        jsail_script_data.extend([0x5C, 0x00]) # fadescreen 0 (fade black)
+        jsail_script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A
+        jsail_script_data.extend([0x31]) # waitfanfare
+        # Warp back to Vermilion Port: Bank 3, Map 4, warp 0xFF, x=24, y=34
+        jsail_script_data.extend([0x39, 0x03, 0x04, 0xFF, 0x18, 0x00, 0x22, 0x00])
+        jsail_script_data.extend([0x27]) # waitstate
+        jsail_script_data.extend([0x6B]) # release
+        jsail_script_data.extend([0x02]) # end
+
+        f.seek(JOHTO_SAILOR_ALLOC)
+        f.write(jsail_script_data)
+        print(f"  [EVENT] Johto Return Sailor script written at {hex(JOHTO_SAILOR_ALLOC)}")
+
+        # D. SCRIPT 4: JOHTO WELCOME GUIDE AIDE SCRIPT (Offset 0x01832800)
+        GUIDE_SCRIPT_ALLOC = 0x01832800
+        cur_guide_str_off = GUIDE_SCRIPT_ALLOC + 0x80
+
+        txt_welcome = encode_gen3(
+            "Bem-vindo à Região de Johto, Campeão de Kanto!\\p"
+            "Aqui sopram os ventos de novos recomeços.\\p"
+            "Os 8 Líderes de Ginásio de Johto foram informados da sua chegada\\l"
+            "e aguardam com equipes de nível lendário (Lv 58 a 87)!\\p"
+            "O Laboratório do Prof. Elm fica logo ao lado.\\p"
+            "Siga para o oeste rumo a Violet City para iniciar o desafio!"
+        )
+
+        ptr_welcome = 0x08000000 + cur_guide_str_off
+        f.seek(cur_guide_str_off); f.write(txt_welcome); cur_guide_str_off += len(txt_welcome)
+        if cur_guide_str_off % 4 != 0: cur_guide_str_off += (4 - (cur_guide_str_off % 4))
+
+        ptr_guide_script_start = 0x08000000 + GUIDE_SCRIPT_ALLOC
+        guide_script_data = bytearray()
+        guide_script_data.extend([0x6A]) # lock
+        guide_script_data.extend([0x5A]) # faceplayer
+        guide_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        guide_script_data.extend(struct.pack('<I', ptr_welcome))
+        guide_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        guide_script_data.extend([0x6C, 0x02]) # waitmsg
+        guide_script_data.extend([0x6B]) # release
+        guide_script_data.extend([0x02]) # end
+
+        f.seek(GUIDE_SCRIPT_ALLOC)
+        f.write(guide_script_data)
+        print(f"  [EVENT] Johto Welcome Guide script written at {hex(GUIDE_SCRIPT_ALLOC)}")
+
+        # E. SCRIPT 5: PROFESSOR ELM LAB SCRIPT & HEAL (Offset 0x01833000)
+        ELM_SCRIPT_ALLOC = 0x01833000
+        cur_elm_str_off = ELM_SCRIPT_ALLOC + 0x80
+
+        txt_elm_greet = encode_gen3(
+            "Ah, você deve ser o Campeão de Kanto!\\p"
+            "O Professor Carvalho me enviou uma mensagem sobre você!\\p"
+            "É uma grande honra receber o Campeão em nosso laboratório.\\p"
+            "A Equipe Rocket foi avistada tramando na Torre de Rádio\\l"
+            "e no Poço dos Slowpoke em Azalea Town.\\p"
+            "Conquiste as 8 Insígnias de Johto e nos ajude a manter a paz!\\p"
+            "Deixe-me restaurar a força total de seus Pokémon!"
+        )
+        txt_elm_healed = encode_gen3(
+            "Sua equipe Pokémon está com a energia restaurada!\\p"
+            "Boa sorte em sua nobre jornada por Johto, Campeão!"
+        )
+
+        ptr_elm_greet = 0x08000000 + cur_elm_str_off
+        f.seek(cur_elm_str_off); f.write(txt_elm_greet); cur_elm_str_off += len(txt_elm_greet)
+        if cur_elm_str_off % 4 != 0: cur_elm_str_off += (4 - (cur_elm_str_off % 4))
+
+        ptr_elm_healed = 0x08000000 + cur_elm_str_off
+        f.seek(cur_elm_str_off); f.write(txt_elm_healed); cur_elm_str_off += len(txt_elm_healed)
+        if cur_elm_str_off % 4 != 0: cur_elm_str_off += (4 - (cur_elm_str_off % 4))
+
+        ptr_elm_script_start = 0x08000000 + ELM_SCRIPT_ALLOC
+        elm_script_data = bytearray()
+        elm_script_data.extend([0x6A]) # lock
+        elm_script_data.extend([0x5A]) # faceplayer
+        elm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        elm_script_data.extend(struct.pack('<I', ptr_elm_greet))
+        elm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        elm_script_data.extend([0x6C, 0x02]) # waitmsg
+        elm_script_data.extend([0x5C, 0x00]) # fadescreen 0 (fade black)
+        elm_script_data.extend([0x25, 0x00, 0x00]) # special 0x0000 (HealParty)
+        elm_script_data.extend([0x2F, 0x00, 0x01]) # fanfare 0x0100 (Center heal jingle)
+        elm_script_data.extend([0x31]) # waitfanfare
+        elm_script_data.extend([0x5C, 0x01]) # fadescreen 1 (fade from black)
+        elm_script_data.extend([0x0F, 0x00]) # loadpointer 0
+        elm_script_data.extend(struct.pack('<I', ptr_elm_healed))
+        elm_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
+        elm_script_data.extend([0x6C, 0x02]) # waitmsg
+        elm_script_data.extend([0x6B]) # release
+        elm_script_data.extend([0x02]) # end
+
+        f.seek(ELM_SCRIPT_ALLOC)
+        f.write(elm_script_data)
+        print(f"  [EVENT] Prof. Elm Lab script written at {hex(ELM_SCRIPT_ALLOC)}")
+
+        # F. MAP EVENTS: NEW BARK TOWN (BANK 43 MAP 0) & PROF. ELM LAB (BANK 44 MAP 0)
+        MAP_EVENTS_ALLOC = 0x01920000
+        cur_ev_off = MAP_EVENTS_ALLOC
+
+        # Helper to write person struct (24 bytes)
+        def pack_person(local_id, pic, x, y, elev, mtype, mradius, script_ptr, flag_id=0):
+            return struct.pack('<BBHhhBBBBHHII',
+                local_id, pic, 0, x, y, elev, mtype, mradius, 0, 0, 0, script_ptr, flag_id
+            )
+
+        # Helper to write warp struct (8 bytes)
+        def pack_warp(x, y, elev, target_warp, target_map, target_bank):
+            return struct.pack('<HHBBBB', x, y, elev, target_warp, target_map, target_bank)
+
+        # Bank 43 Map 0 (New Bark Town):
+        # Person 1: Sailor at x=11, y=9 (Return trip to Vermilion)
+        # Person 2: Guide Aide at x=8, y=10 (Welcome dialogue)
+        # Warp 0: Elm Lab entrance door at x=13, y=13 -> Bank 44, Map 0, Warp 0
+        b43_pdata = bytearray()
+        b43_pdata.extend(pack_person(1, 0x3E, 11, 9, 3, 1, 0, ptr_jsail_script_start))
+        b43_pdata.extend(pack_person(2, 0x1A, 8, 10, 3, 1, 0, ptr_guide_script_start))
+
+        b43_wdata = bytearray()
+        b43_wdata.extend(pack_warp(13, 13, 3, 0, 0, 44))
+
+        ptr_b43_people = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b43_pdata); cur_ev_off += len(b43_pdata)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
+
+        ptr_b43_warps = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b43_wdata); cur_ev_off += len(b43_wdata)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
+
+        # Bank 43 Map 0 events header (20 bytes)
+        b43_events_header = struct.pack('<BBBBIIII',
+            2, 1, 0, 0, # 2 people, 1 warp, 0 coords, 0 signposts
+            ptr_b43_people, ptr_b43_warps, 0, 0
+        )
+        ptr_b43_m0_events = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b43_events_header); cur_ev_off += len(b43_events_header)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
+
+        # Bank 44 Map 0 (Prof. Elm Lab):
+        # Person 1: Prof. Elm at x=6, y=4 (Sprite 0x47, Greet & Heal)
+        # Warp 0: Exit door at x=6, y=12 -> Bank 43, Map 0, Warp 0
+        b44_pdata = bytearray()
+        b44_pdata.extend(pack_person(1, 0x47, 6, 4, 3, 1, 0, ptr_elm_script_start))
+
+        b44_wdata = bytearray()
+        b44_wdata.extend(pack_warp(6, 12, 3, 0, 0, 43))
+
+        ptr_b44_people = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b44_pdata); cur_ev_off += len(b44_pdata)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
+
+        ptr_b44_warps = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b44_wdata); cur_ev_off += len(b44_wdata)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
+
+        # Bank 44 Map 0 events header (20 bytes)
+        b44_events_header = struct.pack('<BBBBIIII',
+            1, 1, 0, 0, # 1 person, 1 warp, 0 coords, 0 signposts
+            ptr_b44_people, ptr_b44_warps, 0, 0
+        )
+        ptr_b44_m0_events = 0x08000000 + cur_ev_off
+        f.seek(cur_ev_off); f.write(b44_events_header); cur_ev_off += len(b44_events_header)
+        if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
 
         # ------------------------------------------------------------------
         # 4. PASSO 1: JOHTO MAP BANKS & OVERWORLD ROUTING (Bank 43 & 44)
@@ -413,16 +751,14 @@ def compile_engine():
         orig_banks = [struct.unpack('<I', f.read(4))[0] for _ in range(43)] # Banks 0..42
 
         # Create MapHeaders for Bank 43 (Johto Overworld) and Bank 44 (Johto Gyms & Interiors)
-        # Bank 43 Overworld Headers:
-        # Layouts use existing stable overworld layouts (e.g. Pallet/Town 0x82dd4c0, Vermilion/City 0x82e1534, Indigo/Summit 0x82e3f04)
         MAP_HDR_ALLOC = 0x01910000
         cur_hdr_off = MAP_HDR_ALLOC
 
-        def make_map_header(layout_ptr, music_id, sec_id, map_type):
+        def make_map_header(layout_ptr, music_id, sec_id, map_type, events_ptr=0x871a6a4):
             nonlocal cur_hdr_off
             hdr_bytes = struct.pack('<IIIIHHBBBBBBB',
                 layout_ptr,
-                0x871a6a4, # Default clean events block
+                events_ptr, # Custom or default events block
                 0x816545a, # Default script block
                 0,         # Connections
                 music_id,
@@ -440,7 +776,7 @@ def compile_engine():
 
         # Bank 43 (Johto Overworld Maps 0 to 7)
         b43_maps = [
-            make_map_header(0x82dd4c0, 0x0113, 153, 1), # Map 0: New Bark Town (Cais S.S. Aqua)
+            make_map_header(0x82dd4c0, 0x0113, 153, 1, ptr_b43_m0_events), # Map 0: New Bark Town (Cais S.S. Aqua)
             make_map_header(0x82e1534, 0x0114, 93, 2),  # Map 1: Violet City
             make_map_header(0x82e1534, 0x0114, 93, 2),  # Map 2: Goldenrod City
             make_map_header(0x82dd4c0, 0x0117, 93, 2),  # Map 3: Ecruteak City
@@ -452,7 +788,7 @@ def compile_engine():
 
         # Bank 44 (Johto Gyms & Interiors Maps 0 to 3)
         b44_maps = [
-            make_map_header(0x82d5754, 0x0113, 93, 5), # Map 0: Prof. Elm Lab
+            make_map_header(0x82d5754, 0x0113, 93, 5, ptr_b44_m0_events), # Map 0: Prof. Elm Lab
             make_map_header(0x82d5990, 0x0119, 93, 5), # Map 1: Violet Gym (Falkner)
             make_map_header(0x82d5990, 0x0119, 93, 5), # Map 2: Goldenrod Gym (Whitney)
             make_map_header(0x82d5990, 0x0132, 97, 4), # Map 3: Mt. Silver Summit (Gold)
