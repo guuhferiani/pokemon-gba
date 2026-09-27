@@ -32,6 +32,8 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 | `0x05A1DC` | `TestRunningShoes` (Tênis Nativo) | **`01 20 70 47`** (`MOV R0,#1; BX LR`) | Tênis de corrida sempre ativo nativamente desde o primeiro passo em Pallet. |
 | `0x0BD14C` | `PlayerNotOnBikeMoving` (Auto-Run) | **`0C D0`** (`BEQ 0xBD168`) | Auto-Run ativo por padrão (2x velocidade de corrida); segurar B anda devagar. |
 | `0x1D99C4` / `0x1D9A3C` | Fast Catch (Pular tela de apelido) | **`0x081D9A50`** / **`28 50 9A 1D 08`** | Pula diálogo e prompt de apelido ao capturar qualquer Pokémon selvagem. |
+| `0xC4D8A` | Limite de busca de nomes de mapa | **`FF 2D`** (`CMP R5, #255`) | Permite seções de mapa expandidas (197..237) para nomes de Johto. |
+| `0xC0C94` / `0xC4DB8` | Ponteiros da tabela de seções | **`0x09940000`** (`gRegionMapNames`) | Tabela expandida com todos os nomes de Johto e Ginásios em PT-BR. |
 | `0x0000BD` | Checksum Complement Cabeçalho GBA | **`0xFB`** (recalculado dinamicamente) | Garante boot sem erro em emuladores rigorosos de Android (Pizza Boy, RetroArch). |
 | `0x1695bb` | Hook pós-jogo Prof. Carvalho (Oak Lab) | **`0x09831000`** (Script Carvalho pós-Liga) | Dispara autorização internacional e passagem do S.S. Aqua após o Hall da Fama. |
 | `0x3b5538` | Hook Marinheiro Vermilion Port | **`0x09830000`** (Script S.S. Aqua) | Controla embarque para Johto (checa Hall da Fama e autorização do Carvalho). |
@@ -44,13 +46,16 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 
 | Offset ROM | Ponteiro GBA | Conteúdo |
 |---|---|---|
-| `0x01800000` | `0x09800000` | Boss Teams de Johto (Falkner a Red/Gold) |
+| `0x01800000` | `0x09800000` | Boss Teams de Johto (Falkner a Red/Gold + Executivo Archer) |
+| `0x01810000` | `0x09810000` | Scripts & Diálogos PT-BR dos 8 Líderes de Johto + Archer + Gold |
 | `0x01830000` | `0x09830000` | Scripts Narrativos Kanto ↔ Johto (Oak, Vermilion Sailor, Johto Sailor, Guide, Elm) |
-| `0x01840000` | `0x09840000` | Tabela expandida de treinadores (752 treinadores) |
+| `0x01840000` | `0x09840000` | Tabela expandida de treinadores (753 treinadores com IA competitiva) |
 | `0x01900000` | `0x09900000` | `gMapGroups` expandido (Banks 0..44) |
-| `0x01910000` | `0x09910000` | Headers e tabelas de mapas de Johto (Bank 43 e Bank 44) |
-| `0x01920000` | `0x09920000` | MapEvents Customizados (New Bark Town e Lab Prof. Elm) |
-| `0x01980000` | `0x09980000` | Tabela expandida de selvagens (Lv 55 a 95) |
+| `0x01910000` | `0x09910000` | Headers e tabelas de mapas de Johto (Bank 43: 31 mapas, Bank 44: 11 mapas) |
+| `0x01920000` | `0x09920000` | MapEvents Customizados (New Bark Town, 8 Ginásios, Torre de Rádio, Mt. Silver) |
+| `0x01930000` | `0x09930000` | MapConnections (Conexões contínuas e bidirecionais das Rotas 29 a 46 e Cidades) |
+| `0x01940000` | `0x09940000` | Tabela de Nomes de Região Expandida (150 seções com títulos PT-BR de Johto) |
+| `0x01980000` | `0x09980000` | Tabela expandida de selvagens de Johto (164 entradas, Lv 55 a 100) |
 | `0x01990000` | `0x09990000` | Tabela Physical / Special Split Gen 4 (356 golpes) |
 
 ## Estado (2026-09-27)
@@ -59,11 +64,20 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - Narrativa Kanto ↔ Johto completa e bidirecional na ROM ✅
 - Evento pós-jogo Prof. Carvalho (Pallet) & Marinheiro S.S. Aqua (Vermilion) ativos ✅
 - Chegada em Johto (New Bark Town) com guia, retorno a Kanto e cura no Lab Elm ✅
+- Banco de Mapas de Johto (Bank 43) completo com 31 mapas (Rotas 29 a 46, Cidades e Mt. Silver) ✅
+- Conexões contínuas de mapa (MapConnections) 100% bidirecionais sem telas de transição ✅
+- Banco de Interiores e Ginásios (Bank 44) completo com os 8 Líderes, Torre de Rádio e Gold ✅
+- Scripts de batalha, diálogos PT-BR e entrega de insígnias implementados para todos os líderes ✅
+- Nomes de mapa na tela (pop-up banner) ativos em português para todas as áreas de Johto ✅
+- Encontros selvagens de alto nível (Lv 55 a 100) ativos em todas as rotas de Johto e Monte Silver ✅
 - Saída de edifícios / warps 100% funcionais ✅
+- Fast Catch (pular tela de apelido na captura) ativo ✅
+- Auto-Run nativo (2x velocidade de corrida por padrão, segurar B para andar) ✅
 - Corrida em interiores e Physical/Special Split ativos ✅
 - National Dex nativa sempre ativa ✅
 - Checksum GBA de cabeçalho válido para Android ✅
 - Tela de título customizada (Charizard vs Lugia) ✅
+- Suíte de 15 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos
