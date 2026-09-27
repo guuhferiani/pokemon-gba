@@ -936,6 +936,19 @@ def compile_engine():
         f.write(bytes([0x00, 0x40, 0x00, 0x28]))
         print(f"  [QoL] Run Indoors patch applied cleanly at 0xbd494 (B-button running inside all buildings!)")
 
+        # Running Shoes Always Unlocked at 0x05A1DC (TestRunningShoes -> always returns 1)
+        # Allows running immediately from the very first step in Pallet Town.
+        f.seek(0x5a1dc)
+        f.write(bytes([0x01, 0x20, 0x70, 0x47]))
+        print(f"  [QoL] Running Shoes unlocked natively from start at 0x5a1dc!")
+
+        # Auto-Run Default at 0x0BD14C in PlayerNotOnBikeMoving
+        # Inverts B-Button branch: '0C D1' (BNE -> run on B) changed to '0C D0' (BEQ -> run without B).
+        # The player runs at 2x speed by default; holding B allows walking slowly/stealthily.
+        f.seek(0xbd14c)
+        f.write(bytes([0x0C, 0xD0]))
+        print(f"  [QoL] Auto-Run active by default at 0xbd14c (2x speed default, hold B to walk)!")
+
         # Physical / Special Split Table at 0x01990000
         # 0 = Physical, 1 = Special, 2 = Status
         SPLIT_TABLE_OFF = 0x01990000
@@ -957,6 +970,23 @@ def compile_engine():
         f.seek(SPLIT_TABLE_OFF)
         f.write(split_bytes)
         print(f"  [QoL] Physical/Special Split table compiled at {hex(SPLIT_TABLE_OFF)}")
+
+        # ------------------------------------------------------------------
+        # 7. QoL: REMOVE NICKNAME PROMPT ON CAPTURE (Fast Catch Flow)
+        # ------------------------------------------------------------------
+        # When catching a Pokemon in battle, the engine invokes Table[5] at 0x1d99c4,
+        # which points to 0x081d9a3c (the prompt asking "Dar um apelido para ... capturado?").
+        # By repointing Table[5] to 0x081d9a50 (and putting 'jump 0x081d9a50' at 0x1d9a3c),
+        # the game completely skips the question, the Yes/No box, and naming screen,
+        # immediately saving the Pokemon to party or sending to PC.
+        CATCH_TABLE5_OFFSET = 0x1d99c4
+        f.seek(CATCH_TABLE5_OFFSET)
+        f.write(struct.pack('<I', 0x081d9a50))
+
+        CATCH_SCRIPT_NICK_OFFSET = 0x1d9a3c
+        f.seek(CATCH_SCRIPT_NICK_OFFSET)
+        f.write(bytes([0x28, 0x50, 0x9A, 0x1D, 0x08]))
+        print(f"  [QoL] Nickname prompt on Pokemon capture disabled (instant fast-catch flow active!)")
 
         # ------------------------------------------------------------------
         # 8. ASM PATCH: RESTORE BUILDING EXIT WARP HANDLER (0x06DC04)

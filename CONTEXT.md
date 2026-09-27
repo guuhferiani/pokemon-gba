@@ -29,6 +29,9 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 | `0x06E25C` | `IsNationalPokedexEnabled` (PT-BR) | **`01 20 70 47`** (`MOV R0,#1; BX LR`) | Local correto da função da National Dex no PT-BR. Torna a Dex sempre ON. |
 | `0x0CE818` | Loop da cena de evolução | **`6A 46 71 F7`** (`MOV R2,SP; BL 0x4037C`) | **NUNCA TOCAR**. Não é trava de evolução; a trava é bypassada por `0x06E25C`. |
 | `0x0BD494` | `IsRunningDisallowed` (Run Indoors) | **`00 40 00 28`** (`ANDS R0,R0; CMP R0,#0`) | Patch oficial para permitir B-Button correr dentro de prédios/cavernas. |
+| `0x05A1DC` | `TestRunningShoes` (Tênis Nativo) | **`01 20 70 47`** (`MOV R0,#1; BX LR`) | Tênis de corrida sempre ativo nativamente desde o primeiro passo em Pallet. |
+| `0x0BD14C` | `PlayerNotOnBikeMoving` (Auto-Run) | **`0C D0`** (`BEQ 0xBD168`) | Auto-Run ativo por padrão (2x velocidade de corrida); segurar B anda devagar. |
+| `0x1D99C4` / `0x1D9A3C` | Fast Catch (Pular tela de apelido) | **`0x081D9A50`** / **`28 50 9A 1D 08`** | Pula diálogo e prompt de apelido ao capturar qualquer Pokémon selvagem. |
 | `0x0000BD` | Checksum Complement Cabeçalho GBA | **`0xFB`** (recalculado dinamicamente) | Garante boot sem erro em emuladores rigorosos de Android (Pizza Boy, RetroArch). |
 | `0x1695bb` | Hook pós-jogo Prof. Carvalho (Oak Lab) | **`0x09831000`** (Script Carvalho pós-Liga) | Dispara autorização internacional e passagem do S.S. Aqua após o Hall da Fama. |
 | `0x3b5538` | Hook Marinheiro Vermilion Port | **`0x09830000`** (Script S.S. Aqua) | Controla embarque para Johto (checa Hall da Fama e autorização do Carvalho). |
