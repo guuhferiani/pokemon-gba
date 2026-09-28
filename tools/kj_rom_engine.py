@@ -1344,14 +1344,69 @@ def compile_engine():
             "Trava de Nível DESATIVADA!"
         )
         txt_mod_bye = encode_gen3(
-            "Configurações atualizadas com sucesso! Volte sempre que quiser ajustar seus Mods!"
+            "Mods atualizados! Deseja ver os Cheats disponíveis?\\p"
+            "Cheats são seguros e podem ser usados a qualquer momento!"
+        )
+        # Cheats Strings
+        txt_cheat_c1 = encode_gen3(
+            "CHEAT 1: PACOTE DE BATALHA.\\n"
+            "Receba 99x Ultra Balls, 10x Rare Candy,\\l3x Master Balls e 5x Max Revive!\\p"
+            "Deseja receber o pacote?"
+        )
+        txt_cheat_c1_yes = encode_gen3(
+            "Pacote de Batalha entregue! Boa sorte em suas capturas, Campeão!"
+        )
+        txt_cheat_c2 = encode_gen3(
+            "CHEAT 2: TODOS OS HMS.\\n"
+            "Receba HM01 (Cut), HM02 (Fly), HM03 (Surf),\\lHM04 (Strength), HM05 (Flash),\\lHM06 (Rock Smash) e HM07 (Waterfall).\\p"
+            "Deseja receber todos os HMs?"
+        )
+        txt_cheat_c2_yes = encode_gen3(
+            "Todos os 7 HMs foram adicionados à sua mochila!"
+        )
+        txt_cheat_c3 = encode_gen3(
+            "CHEAT 3: VITAMINAS COMPLETAS.\\n"
+            "Receba 10x de cada vitamina:\\lHP Up, Protein, Iron, Carbos, Calcium e Zinc.\\p"
+            "Deseja receber as vitaminas?"
+        )
+        txt_cheat_c3_yes = encode_gen3(
+            "10x de cada vitamina foram adicionadas à sua mochila!"
+        )
+        txt_cheat_c4 = encode_gen3(
+            "CHEAT 4: SHINY BOOST (1/256).\\n"
+            "Ativa a taxa aumentada de Pokémon Shiny raros.\\p"
+            "Deseja ATIVAR o Shiny Boost?"
+        )
+        txt_cheat_c4_on = encode_gen3(
+            "Shiny Boost ATIVADO! Pokémon brilhantes aparecem\\lmuito mais frequentemente!"
+        )
+        txt_cheat_c4_off = encode_gen3(
+            "Shiny Boost DESATIVADO! Taxa normal (1/8192) restaurada."
+        )
+        txt_cheat_c5 = encode_gen3(
+            "CHEAT 5: INSÍGNIAS DE JOHTO.\\n"
+            "Receba todas as 8 Insígnias de Johto instantaneamente.\\p"
+            "Deseja receber as Insígnias?"
+        )
+        txt_cheat_c5_yes = encode_gen3(
+            "Você recebeu todas as 8 Insígnias de Johto!\\pSua jornada em Johto está completa!"
+        )
+        txt_cheat_bye = encode_gen3(
+            "Cheats e Mods configurados com sucesso!\\pVolte sempre que precisar, Campeão!"
         )
 
         mod_strings = [
             txt_mod_greet, txt_mod_q1, txt_mod_q1_on, txt_mod_q1_off,
             txt_mod_q2, txt_mod_q2_yes, txt_mod_q3, txt_mod_q3_on,
             txt_mod_q3_off, txt_mod_q4, txt_mod_q4_on, txt_mod_q4_off,
-            txt_mod_bye
+            txt_mod_bye,
+            # Cheats strings
+            txt_cheat_c1, txt_cheat_c1_yes,
+            txt_cheat_c2, txt_cheat_c2_yes,
+            txt_cheat_c3, txt_cheat_c3_yes,
+            txt_cheat_c4, txt_cheat_c4_on, txt_cheat_c4_off,
+            txt_cheat_c5, txt_cheat_c5_yes,
+            txt_cheat_bye
         ]
         mod_ptrs = []
         for s in mod_strings:
@@ -1366,7 +1421,13 @@ def compile_engine():
         (ptr_mod_greet, ptr_mod_q1, ptr_mod_q1_on, ptr_mod_q1_off,
          ptr_mod_q2, ptr_mod_q2_yes, ptr_mod_q3, ptr_mod_q3_on,
          ptr_mod_q3_off, ptr_mod_q4, ptr_mod_q4_on, ptr_mod_q4_off,
-         ptr_mod_bye) = mod_ptrs
+         ptr_mod_bye,
+         ptr_cheat_c1, ptr_cheat_c1_yes,
+         ptr_cheat_c2, ptr_cheat_c2_yes,
+         ptr_cheat_c3, ptr_cheat_c3_yes,
+         ptr_cheat_c4, ptr_cheat_c4_on, ptr_cheat_c4_off,
+         ptr_cheat_c5, ptr_cheat_c5_yes,
+         ptr_cheat_bye) = mod_ptrs
 
         def assemble_mod_script(lbls):
             scr = bytearray()
@@ -1435,17 +1496,97 @@ def compile_engine():
             scr.extend([0x29, 0xE3, 0x02])
             scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q4_on))
             scr.extend([0x09, 0x04, 0x6C, 0x02])
-            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('closing', 0)))
+            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('cheats_gate', 0)))
 
             # Q4 No: clearflag 0x02E3
             lbls['q4_no'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
             scr.extend([0x2A, 0xE3, 0x02])
             scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q4_off))
             scr.extend([0x09, 0x04, 0x6C, 0x02])
+            # fallthrough -> cheats_gate (no explicit goto needed, it's next in bytecode)
+
+            # Cheats gate: Q4 Yes/No both fall through here to ask about cheats
+            # ptr_mod_bye was changed to ask "Deseja ver os Cheats?" (MSG_YESNO)
+            lbls['cheats_gate'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_bye))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00]) # compare VAR_RESULT, 0
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('closing', 0))) # No -> skip cheats
+
+            # C1: Battle Pack (Ultra Balls, Rare Candy, Master Ball, Max Revive)
+            lbls['c1'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c1))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('c2', 0)))
+            # C1 Yes
+            scr.extend([0x47, 0x02, 0x00, 0x63, 0x00]) # additem Ultra Ball x99
+            scr.extend([0x47, 0x44, 0x00, 0x0A, 0x00]) # additem Rare Candy x10
+            scr.extend([0x47, 0x01, 0x00, 0x03, 0x00]) # additem Master Ball x3
+            scr.extend([0x47, 0x25, 0x00, 0x05, 0x00]) # additem Max Revive x5
+            scr.extend([0x2F, 0x1A, 0x01, 0x31])       # fanfare 0x11A, waitfanfare
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c1_yes))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # C2: All HMs (HM01-HM07 = items 339-345)
+            lbls['c2'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c2))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('c3', 0)))
+            # C2 Yes
+            for hm_id in [339, 340, 341, 342, 343, 344, 345]: # HM01..HM07
+                scr.extend([0x47, hm_id & 0xFF, (hm_id >> 8) & 0xFF, 0x01, 0x00])
+            scr.extend([0x2F, 0x1A, 0x01, 0x31])       # fanfare, waitfanfare
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c2_yes))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # C3: Full Vitamins (HP Up, Protein, Iron, Carbos, Calcium, Zinc x10)
+            lbls['c3'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c3))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('c4', 0)))
+            # C3 Yes
+            for vit_id in [63, 64, 65, 66, 67, 70]: # HP Up, Protein, Iron, Carbos, Calcium, Zinc
+                scr.extend([0x47, vit_id & 0xFF, (vit_id >> 8) & 0xFF, 0x0A, 0x00]) # x10 each
+            scr.extend([0x2F, 0x1A, 0x01, 0x31])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c3_yes))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # C4: Shiny Boost (Flag 0x02E4)
+            lbls['c4'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c4))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('c4_no', 0)))
+            # C4 Yes: setflag 0x02E4 (Shiny Boost ON)
+            scr.extend([0x29, 0xE4, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c4_on))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('c5', 0)))
+            # C4 No: clearflag 0x02E4 (Shiny Boost OFF)
+            lbls['c4_no'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x2A, 0xE4, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c4_off))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # C5: All Johto Badges (Flags 0x0282..0x0289)
+            lbls['c5'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c5))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('closing', 0)))
+            # C5 Yes: setflag for all 8 Johto Gym badges
+            for badge_flag in [0x0282, 0x0283, 0x0284, 0x0285, 0x0286, 0x0287, 0x0288, 0x0289]:
+                scr.extend([0x29, badge_flag & 0xFF, (badge_flag >> 8) & 0xFF])
+            scr.extend([0x2F, 0x1A, 0x01, 0x31])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_c5_yes))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
 
             # Closing
             lbls['closing'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
-            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_bye))
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_cheat_bye))
             scr.extend([0x09, 0x04, 0x6C, 0x02])
             scr.extend([0x6B, 0x02]) # release, end
             return scr
@@ -1453,10 +1594,11 @@ def compile_engine():
         mod_lbls = {}
         assemble_mod_script(mod_lbls) # Pass 1 to calculate label offsets
         final_mod_script = assemble_mod_script(mod_lbls) # Pass 2 with resolved pointers
+        assert len(final_mod_script) < 0x300, f"Mod script too large: {len(final_mod_script)} bytes (max 768)"
         f.seek(MOD_SCRIPT_ALLOC)
         f.write(final_mod_script)
         ptr_mod_attendant_script = 0x08000000 + MOD_SCRIPT_ALLOC
-        print(f"  [MOD] Mod Attendant Script compiled at {hex(ptr_mod_attendant_script)} ({len(final_mod_script)} bytes)")
+        print(f"  [MOD] Mod Attendant Script (w/ Cheats) compiled at {hex(ptr_mod_attendant_script)} ({len(final_mod_script)} bytes | Mods: 4 | Cheats: 5)")
 
         # Bank 43 Events
         b43_events = {}
