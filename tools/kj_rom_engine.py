@@ -83,17 +83,17 @@ def encode_gen3(text, length=None):
 SPECIES = {
     'BULBASAUR': 1, 'IVYSAUR': 2, 'VENUSAUR': 3, 'CHARMANDER': 4, 'CHARIZARD': 6,
     'SQUIRTLE': 7, 'BLASTOISE': 9, 'PIDGEY': 16, 'PIDGEOT': 18, 'RATTATA': 19,
-    'RATICATE': 20, 'SPEAROW': 21, 'EKANS': 23, 'PIKACHU': 25, 'SANDSHREW': 27,
+    'RATICATE': 20, 'SPEAROW': 21, 'EKANS': 23, 'ARBOK': 24, 'PIKACHU': 25, 'SANDSHREW': 27,
     'CLEFABLE': 36, 'VULPIX': 37, 'WIGGLYTUFF': 40, 'ZUBAT': 41, 'GOLBAT': 42,
     'ODDISH': 43, 'PARAS': 46, 'MEOWTH': 52, 'PSYDUCK': 54, 'PRIMEAPE': 57,
-    'GROWLITHE': 58, 'POLIWAG': 60, 'POLIWHIRL': 61, 'POLIWRATH': 62, 'ABRA': 63,
+    'GROWLITHE': 58, 'ARCANINE': 59, 'POLIWAG': 60, 'POLIWHIRL': 61, 'POLIWRATH': 62, 'ABRA': 63,
     'ALAKAZAM': 65, 'MACHAMP': 68, 'BELLSPROUT': 69, 'TENTACOOL': 72, 'TENTACRUEL': 73,
-    'GEODUDE': 74, 'GRAVELER': 75, 'MAGNETON': 82, 'DEWGONG': 87, 'GASTLY': 92,
+    'GEODUDE': 74, 'GRAVELER': 75, 'SLOWBRO': 80, 'MAGNETON': 82, 'DEWGONG': 87, 'CLOYSTER': 91, 'GASTLY': 92,
     'HAUNTER': 93, 'GENGAR': 94, 'ONIX': 95, 'DROWZEE': 96, 'VOLTORB': 100,
-    'WEEZING': 110, 'CHANSEY': 113, 'HORSEA': 116,
+    'HITMONLEE': 106, 'HITMONCHAN': 107, 'WEEZING': 110, 'CHANSEY': 113, 'HORSEA': 116,
     'SEADRA': 117, 'STARYU': 120, 'SCYTHER': 123, 'JYNX': 124, 'MAGMAR': 126,
     'PINSIR': 127, 'TAUROS': 128, 'MAGIKARP': 129, 'GYARADOS': 130, 'LAPRAS': 131,
-    'DITTO': 132, 'EEVEE': 133, 'SNORLAX': 143, 'DRATINI': 147, 'DRAGONAIR': 148,
+    'DITTO': 132, 'EEVEE': 133, 'AERODACTYL': 142, 'SNORLAX': 143, 'DRATINI': 147, 'DRAGONAIR': 148,
     'DRAGONITE': 149, 'MEWTWO': 150, 'MEW': 151,
     # Johto Species
     'CHIKORITA': 152, 'BAYLEEF': 153, 'MEGANIUM': 154, 'CYNDAQUIL': 155, 'QUILAVA': 156,
@@ -117,16 +117,18 @@ SPECIES = {
 
 # Gen 3 Move IDs
 MOVES = {
-    'WING_ATTACK': 17, 'SWORDS_DANCE': 14, 'BODY_SLAM': 34, 'FLAMETHROWER': 53, 'HYDRO_PUMP': 56,
-    'SURF': 57, 'ICE_BEAM': 58, 'BLIZZARD': 59, 'HYPER_BEAM': 63, 'THUNDERBOLT': 85,
-    'EARTHQUAKE': 89, 'PSYCHIC': 94, 'HYPNOSIS': 95, 'CONFUSE_RAY': 109, 'DREAM_EATER': 138,
-    'EXPLOSION': 153, 'ROCK_SLIDE': 157, 'SPIKES': 191, 'DESTINY_BOND': 194, 'ROLLOUT': 205,
-    'MILK_DRINK': 208, 'STEEL_WING': 211, 'ATTRACT': 213, 'DYNAMIC_PUNCH': 223, 'MEGAHORN': 224,
-    'IRON_TAIL': 231, 'CROSS_CHOP': 238, 'SHADOW_BALL': 247, 'BRICK_BREAK': 280, 'SILVER_WIND': 318,
-    'SIGNAL_BEAM': 324, 'AERIAL_ACE': 332, 'DRAGON_CLAW': 337, 'DRAGON_DANCE': 349, 'ROOST': 355, 'AEROBLAST': 177,
-    'SACRED_FIRE': 221, 'BRAVE_BIRD': 332, 'RECOVER': 105, 'THUNDER_PUNCH': 9, 'SWIFT': 129,
-    'SOLAR_BEAM': 76, 'SYNTHESIS': 235, 'FLASH_CANNON': 332, 'THUNDER_WAVE': 86,
-    'FIRE_BLAST': 126, 'SLUDGE_BOMB': 188, 'CRUNCH': 242
+    'FIRE_PUNCH': 7, 'ICE_PUNCH': 8, 'THUNDER_PUNCH': 9, 'SWORDS_DANCE': 14,
+    'WING_ATTACK': 17, 'MEGA_KICK': 25, 'BODY_SLAM': 34, 'FLAMETHROWER': 53, 'HYDRO_PUMP': 56,
+    'SURF': 57, 'ICE_BEAM': 58, 'BLIZZARD': 59, 'HYPER_BEAM': 63, 'SOLAR_BEAM': 76,
+    'THUNDERBOLT': 85, 'THUNDER_WAVE': 86, 'EARTHQUAKE': 89, 'PSYCHIC': 94, 'HYPNOSIS': 95,
+    'RECOVER': 105, 'CONFUSE_RAY': 109, 'REFLECT': 115, 'FIRE_BLAST': 126, 'SWIFT': 129,
+    'DREAM_EATER': 138, 'EXPLOSION': 153, 'ROCK_SLIDE': 157, 'AEROBLAST': 177, 'SLUDGE_BOMB': 188,
+    'SPIKES': 191, 'DESTINY_BOND': 194, 'OUTRAGE': 200, 'ROLLOUT': 205, 'MILK_DRINK': 208,
+    'STEEL_WING': 211, 'ATTRACT': 213, 'SACRED_FIRE': 221, 'DYNAMIC_PUNCH': 223, 'MEGAHORN': 224,
+    'IRON_TAIL': 231, 'SYNTHESIS': 235, 'CROSS_CHOP': 238, 'CRUNCH': 242, 'EXTREME_SPEED': 245,
+    'SHADOW_BALL': 247, 'BRICK_BREAK': 280, 'SILVER_WIND': 318, 'SIGNAL_BEAM': 324,
+    'AERIAL_ACE': 332, 'BRAVE_BIRD': 332, 'FLASH_CANNON': 332, 'DRAGON_CLAW': 337,
+    'DRAGON_DANCE': 349, 'ROOST': 355
 }
 
 # 8 Johto Leaders + Mt. Silver Champion + Radio Tower Executive specifications
@@ -216,6 +218,87 @@ JOHTO_LEADERS = [
     }
 ]
 
+# 100% Pure Gen 1 & Gen 2 Elite Four & Champion Rematches (Trainers 735..741, Lv 80..90)
+ELITE_FOUR_REMATCHES = [
+    {
+        'id': 'lorelei_rematch', 'trainer_idx': 735, 'name': 'LORELEI',
+        'party': [
+            {'species': 'DEWGONG', 'lvl': 80, 'moves': ['SURF', 'ICE_BEAM', 'SIGNAL_BEAM', 'BODY_SLAM']},
+            {'species': 'CLOYSTER', 'lvl': 80, 'moves': ['SURF', 'ICE_BEAM', 'SPIKES', 'EXPLOSION']},
+            {'species': 'PILOSWINE', 'lvl': 81, 'moves': ['EARTHQUAKE', 'BLIZZARD', 'ROCK_SLIDE', 'BODY_SLAM']},
+            {'species': 'JYNX', 'lvl': 81, 'moves': ['PSYCHIC', 'ICE_BEAM', 'SHADOW_BALL', 'HYPNOSIS']},
+            {'species': 'SLOWBRO', 'lvl': 82, 'moves': ['SURF', 'PSYCHIC', 'ICE_BEAM', 'THUNDER_WAVE']},
+            {'species': 'LAPRAS', 'lvl': 83, 'moves': ['SURF', 'ICE_BEAM', 'THUNDERBOLT', 'CONFUSE_RAY']},
+        ]
+    },
+    {
+        'id': 'bruno_rematch', 'trainer_idx': 736, 'name': 'BRUNO',
+        'party': [
+            {'species': 'STEELIX', 'lvl': 81, 'moves': ['EARTHQUAKE', 'IRON_TAIL', 'ROCK_SLIDE', 'EXPLOSION']},
+            {'species': 'HITMONLEE', 'lvl': 81, 'moves': ['MEGA_KICK', 'BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE']},
+            {'species': 'HITMONCHAN', 'lvl': 81, 'moves': ['THUNDER_PUNCH', 'ICE_PUNCH', 'FIRE_PUNCH', 'BRICK_BREAK']},
+            {'species': 'HITMONTOP', 'lvl': 82, 'moves': ['BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE', 'SWIFT']},
+            {'species': 'HERACROSS', 'lvl': 82, 'moves': ['MEGAHORN', 'BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE']},
+            {'species': 'MACHAMP', 'lvl': 84, 'moves': ['CROSS_CHOP', 'ROCK_SLIDE', 'EARTHQUAKE', 'HYPER_BEAM']},
+        ]
+    },
+    {
+        'id': 'agatha_rematch', 'trainer_idx': 737, 'name': 'AGATHA',
+        'party': [
+            {'species': 'GENGAR', 'lvl': 82, 'moves': ['SHADOW_BALL', 'THUNDERBOLT', 'PSYCHIC', 'CONFUSE_RAY']},
+            {'species': 'CROBAT', 'lvl': 82, 'moves': ['WING_ATTACK', 'SLUDGE_BOMB', 'CONFUSE_RAY', 'SHADOW_BALL']},
+            {'species': 'MISDREAVUS', 'lvl': 83, 'moves': ['SHADOW_BALL', 'PSYCHIC', 'THUNDERBOLT', 'DESTINY_BOND']},
+            {'species': 'ARBOK', 'lvl': 83, 'moves': ['SLUDGE_BOMB', 'EARTHQUAKE', 'IRON_TAIL', 'CRUNCH']},
+            {'species': 'HOUNDOOM', 'lvl': 84, 'moves': ['FLAMETHROWER', 'CRUNCH', 'SLUDGE_BOMB', 'HYPER_BEAM']},
+            {'species': 'GENGAR', 'lvl': 85, 'moves': ['SHADOW_BALL', 'SLUDGE_BOMB', 'THUNDERBOLT', 'DESTINY_BOND']},
+        ]
+    },
+    {
+        'id': 'lance_rematch', 'trainer_idx': 738, 'name': 'LANCE',
+        'party': [
+            {'species': 'GYARADOS', 'lvl': 84, 'moves': ['DRAGON_DANCE', 'EARTHQUAKE', 'HYDRO_PUMP', 'HYPER_BEAM']},
+            {'species': 'AERODACTYL', 'lvl': 84, 'moves': ['ROCK_SLIDE', 'WING_ATTACK', 'EARTHQUAKE', 'HYPER_BEAM']},
+            {'species': 'CHARIZARD', 'lvl': 85, 'moves': ['FLAMETHROWER', 'DRAGON_CLAW', 'WING_ATTACK', 'EARTHQUAKE']},
+            {'species': 'KINGDRA', 'lvl': 85, 'moves': ['DRAGON_DANCE', 'HYDRO_PUMP', 'ICE_BEAM', 'DRAGON_CLAW']},
+            {'species': 'DRAGONITE', 'lvl': 86, 'moves': ['DRAGON_DANCE', 'OUTRAGE', 'EARTHQUAKE', 'HYPER_BEAM']},
+            {'species': 'TYRANITAR', 'lvl': 87, 'moves': ['ROCK_SLIDE', 'EARTHQUAKE', 'DRAGON_DANCE', 'CRUNCH']},
+        ]
+    },
+    {
+        'id': 'rival_blastoise_rematch', 'trainer_idx': 739, 'name': 'RIVAL',
+        'party': [
+            {'species': 'ALAKAZAM', 'lvl': 86, 'moves': ['PSYCHIC', 'SHADOW_BALL', 'THUNDERBOLT', 'REFLECT']},
+            {'species': 'SCIZOR', 'lvl': 86, 'moves': ['SWORDS_DANCE', 'STEEL_WING', 'BRICK_BREAK', 'AERIAL_ACE']},
+            {'species': 'HERACROSS', 'lvl': 87, 'moves': ['MEGAHORN', 'BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE']},
+            {'species': 'TYRANITAR', 'lvl': 87, 'moves': ['ROCK_SLIDE', 'EARTHQUAKE', 'DRAGON_DANCE', 'HYPER_BEAM']},
+            {'species': 'ARCANINE', 'lvl': 88, 'moves': ['FLAMETHROWER', 'EXTREME_SPEED', 'CRUNCH', 'IRON_TAIL']},
+            {'species': 'BLASTOISE', 'lvl': 90, 'moves': ['HYDRO_PUMP', 'ICE_BEAM', 'EARTHQUAKE', 'BODY_SLAM']},
+        ]
+    },
+    {
+        'id': 'rival_venusaur_rematch', 'trainer_idx': 740, 'name': 'RIVAL',
+        'party': [
+            {'species': 'ALAKAZAM', 'lvl': 86, 'moves': ['PSYCHIC', 'SHADOW_BALL', 'THUNDERBOLT', 'REFLECT']},
+            {'species': 'SCIZOR', 'lvl': 86, 'moves': ['SWORDS_DANCE', 'STEEL_WING', 'BRICK_BREAK', 'AERIAL_ACE']},
+            {'species': 'HERACROSS', 'lvl': 87, 'moves': ['MEGAHORN', 'BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE']},
+            {'species': 'TYRANITAR', 'lvl': 87, 'moves': ['ROCK_SLIDE', 'EARTHQUAKE', 'DRAGON_DANCE', 'HYPER_BEAM']},
+            {'species': 'ARCANINE', 'lvl': 88, 'moves': ['FLAMETHROWER', 'EXTREME_SPEED', 'CRUNCH', 'IRON_TAIL']},
+            {'species': 'VENUSAUR', 'lvl': 90, 'moves': ['SOLAR_BEAM', 'SLUDGE_BOMB', 'EARTHQUAKE', 'SYNTHESIS']},
+        ]
+    },
+    {
+        'id': 'rival_charizard_rematch', 'trainer_idx': 741, 'name': 'RIVAL',
+        'party': [
+            {'species': 'ALAKAZAM', 'lvl': 86, 'moves': ['PSYCHIC', 'SHADOW_BALL', 'THUNDERBOLT', 'REFLECT']},
+            {'species': 'SCIZOR', 'lvl': 86, 'moves': ['SWORDS_DANCE', 'STEEL_WING', 'BRICK_BREAK', 'AERIAL_ACE']},
+            {'species': 'HERACROSS', 'lvl': 87, 'moves': ['MEGAHORN', 'BRICK_BREAK', 'ROCK_SLIDE', 'EARTHQUAKE']},
+            {'species': 'TYRANITAR', 'lvl': 87, 'moves': ['ROCK_SLIDE', 'EARTHQUAKE', 'DRAGON_DANCE', 'HYPER_BEAM']},
+            {'species': 'GYARADOS', 'lvl': 88, 'moves': ['DRAGON_DANCE', 'EARTHQUAKE', 'HYDRO_PUMP', 'HYPER_BEAM']},
+            {'species': 'CHARIZARD', 'lvl': 90, 'moves': ['FLAMETHROWER', 'DRAGON_CLAW', 'WING_ATTACK', 'EARTHQUAKE']},
+        ]
+    }
+]
+
 def build_party_bytes(party_list):
     data = bytearray()
     for mon in party_list:
@@ -257,6 +340,16 @@ def compile_engine():
             cur_party_off += len(p_data)
             if cur_party_off % 4 != 0: cur_party_off += (4 - (cur_party_off % 4))
 
+        for rem in ELITE_FOUR_REMATCHES:
+            p_data = build_party_bytes(rem['party'])
+            f.seek(cur_party_off)
+            f.write(p_data)
+            gba_ptr = 0x08000000 + cur_party_off
+            party_ptrs[rem['id']] = (gba_ptr, len(rem['party']))
+            print(f"  [E4 REMATCH] {rem['name']} (Trainer {rem['trainer_idx']}): {len(rem['party'])} Pokémon -> ROM {hex(cur_party_off)} (Ptr: {hex(gba_ptr)})")
+            cur_party_off += len(p_data)
+            if cur_party_off % 4 != 0: cur_party_off += (4 - (cur_party_off % 4))
+
         # ------------------------------------------------------------------
         # 2. REPOINT & EXPAND TRAINER TABLE (Offset 0x01840000 / GBA 0x09840000)
         # ------------------------------------------------------------------
@@ -266,6 +359,17 @@ def compile_engine():
         orig_tbl_data = bytearray(f.read(ORIG_TRAINER_COUNT * 40))
 
         new_tbl_data = bytearray(orig_tbl_data)
+
+        # Update Elite Four Rematch Trainers (735..741) in original slice
+        for rem in ELITE_FOUR_REMATCHES:
+            t_idx = rem['trainer_idx']
+            t_off = t_idx * 40
+            ptr_party, party_sz = party_ptrs[rem['id']]
+            new_tbl_data[t_off] = 1 # Custom moves (16 bytes per mon)
+            new_tbl_data[t_off + 28 : t_off + 32] = struct.pack('<I', 0x00000007) # Smart competitive AI
+            new_tbl_data[t_off + 32] = party_sz # 6 Pokémon
+            new_tbl_data[t_off + 36 : t_off + 40] = struct.pack('<I', ptr_party)
+            print(f"  [E4 REMATCH] Updated Trainer {t_idx} ({rem['name']}) -> Party Ptr {hex(ptr_party)}, AI=0x07")
 
         for leader in JOHTO_LEADERS:
             ptr_party, party_sz = party_ptrs[leader['id']]
@@ -374,6 +478,7 @@ def compile_engine():
         oak_script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A (Obtain fanfare)
         oak_script_data.extend([0x31]) # waitfanfare
         oak_script_data.extend([0x29, 0x81, 0x02]) # setflag 0x0281 (FLAG_OAK_AUTHORIZED_JOHTO)
+        oak_script_data.extend([0x29, 0x44, 0x08]) # setflag 0x0844 (FLAG_SYS_CAN_LINK_WITH_RS - unlocks E4 Rematches!)
         oak_script_data.extend([0x0F, 0x00]) # loadpointer 0
         oak_script_data.extend(struct.pack('<I', ptr_oak_conclude))
         oak_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
@@ -384,6 +489,7 @@ def compile_engine():
         while len(oak_script_data) < 0x30: oak_script_data.append(0x00)
 
         # Reminder branch (already authorized):
+        oak_script_data.extend([0x29, 0x44, 0x08]) # Ensure setflag 0x0844 is active on re-talk
         oak_script_data.extend([0x0F, 0x00]) # loadpointer 0
         oak_script_data.extend(struct.pack('<I', ptr_oak_reminder))
         oak_script_data.extend([0x09, 0x04]) # callstd MSG_NORMAL
@@ -517,6 +623,7 @@ def compile_engine():
         verm_script_data.extend([0x31]) # waitfanfare
         verm_script_data.extend([0x29, 0x29, 0x08]) # setflag 0x0829 (FLAG_SYS_NATIONAL_DEX)
         verm_script_data.extend([0x29, 0x2A, 0x08]) # setflag 0x082A (FLAG_SYS_POKEDEX_GET)
+        verm_script_data.extend([0x29, 0x44, 0x08]) # setflag 0x0844 (FLAG_SYS_CAN_LINK_WITH_RS)
         # Warp to Johto New Bark Town arrival dock: Bank 43 (0x2B), Map 0, Warp 0xFF, x=11, y=10
         verm_script_data.extend([0x39, 0x2B, 0x00, 0xFF, 0x0B, 0x00, 0x0A, 0x00])
         verm_script_data.extend([0x27]) # waitstate
@@ -590,6 +697,7 @@ def compile_engine():
         jsail_script_data.extend([0x5C, 0x00]) # fadescreen 0 (fade black)
         jsail_script_data.extend([0x2F, 0x1A, 0x01]) # fanfare 0x011A
         jsail_script_data.extend([0x31]) # waitfanfare
+        jsail_script_data.extend([0x29, 0x44, 0x08]) # setflag 0x0844
         # Warp back to Vermilion Port: Bank 3, Map 4, warp 0xFF, x=24, y=34
         jsail_script_data.extend([0x39, 0x03, 0x04, 0xFF, 0x18, 0x00, 0x22, 0x00])
         jsail_script_data.extend([0x27]) # waitstate
@@ -1058,6 +1166,92 @@ def compile_engine():
             if cur_ev_off % 4 != 0: cur_ev_off += (4 - (cur_ev_off % 4))
             return ptr_hdr
 
+        # ------------------------------------------------------------------
+        # 4C. JOHTO COMPETITIVE MART, CELADON 4F & FREE MOVE RELEARNER
+        # ------------------------------------------------------------------
+        ITEM_TABLE_OFF = 0x3db028
+
+        # A. Celadon Dept Store 4F Stone Shop Repoint (Offset 0x019A9000)
+        CELADON_4F_ITEMS_OFF = 0x019A9000
+        CELADON_4F_ITEMS_PTR = 0x08000000 + CELADON_4F_ITEMS_OFF
+        celadon_items = [93, 94, 95, 96, 97, 98, 187, 199, 201, 218, 195, 68, 80, 132, 0]
+        celadon_bytes = bytearray()
+        for it in celadon_items:
+            celadon_bytes.extend(struct.pack('<H', it))
+        f.seek(CELADON_4F_ITEMS_OFF)
+        f.write(celadon_bytes)
+        f.seek(0x16bc21)
+        f.write(struct.pack('<I', CELADON_4F_ITEMS_PTR))
+        print(f"  [SHOP] Celadon 4F stone department expanded with all 10 stones/evolution items + Rare Candy at {hex(CELADON_4F_ITEMS_OFF)}")
+
+        # B. Free Move Relearner (Two Island mushroom bypass)
+        f.seek(0x17163a)
+        f.write(struct.pack('<I', 0x081716BE))
+        f.seek(0x17164a)
+        f.write(struct.pack('<I', 0x081716BE))
+        f.seek(0x17170b)
+        f.write(bytes([0x6B, 0x02])) # release; end
+        print(f"  [RELEARNER] Two Island Move Relearner patched: 100% free, 0 mushrooms required!")
+
+        # C. Master Ball price set to 50,000 in item table (Item 1)
+        f.seek(ITEM_TABLE_OFF + 1 * 44 + 16)
+        f.write(struct.pack('<H', 50000))
+
+        # D. Goldenrod City Competitive Mart & Move Relearner Scripts (0x01834000)
+        GOLDENROD_MART_ITEMS_OFF = 0x019A9100
+        GOLDENROD_MART_ITEMS_PTR = 0x08000000 + GOLDENROD_MART_ITEMS_OFF
+        goldenrod_items = [
+            93, 94, 95, 96, 97, 98,             # Sun, Moon, Fire, Thunder, Water, Leaf Stone
+            187, 199, 201, 218, 195,            # King's Rock, Metal Coat, Dragon Scale, Up-Grade, Everstone
+            182, 183, 186, 196, 197, 198, 200,  # Exp Share, Quick Claw, Choice Band, Focus Band, Lucky Egg, Scope Lens, Leftovers
+            63, 64, 65, 66, 67, 70,             # HP Up, Protein, Iron, Carbos, Calcium, Zinc
+            68, 69, 71, 37, 25, 19,             # Rare Candy, PP Up, PP Max, Max Elixir, Max Revive, Full Restore
+            1, 2,                               # Master Ball, Ultra Ball
+            0
+        ]
+        gmart_bytes = bytearray()
+        for it in goldenrod_items:
+            gmart_bytes.extend(struct.pack('<H', it))
+        f.seek(GOLDENROD_MART_ITEMS_OFF)
+        f.write(gmart_bytes)
+
+        # Goldenrod Mart Clerk Script (0x01834000)
+        txt_gmart_welcome = encode_gen3("Olá, Campeão! Bem-vindo ao Mercado Especial de Goldenrod!\\pTemos itens evolutivos raros, vitaminas, itens de batalha e suprimentos de elite!")
+        txt_gmart_bye = encode_gen3("Obrigado pela preferência! Boa sorte em seu treinamento para o Monte Silver!")
+        ptr_gmart_welcome = 0x08000000 + 0x01834100
+        f.seek(0x01834100); f.write(txt_gmart_welcome)
+        ptr_gmart_bye = 0x08000000 + 0x01834200
+        f.seek(0x01834200); f.write(txt_gmart_bye)
+
+        gmart_scr = bytearray()
+        gmart_scr.extend([0x6A, 0x5A]) # lock, faceplayer
+        gmart_scr.extend([0x0F, 0x00])
+        gmart_scr.extend(struct.pack('<I', ptr_gmart_welcome))
+        gmart_scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd MSG_NORMAL, waitmsg
+        gmart_scr.extend([0x86]) # pokemart
+        gmart_scr.extend(struct.pack('<I', GOLDENROD_MART_ITEMS_PTR))
+        gmart_scr.extend([0x0F, 0x00])
+        gmart_scr.extend(struct.pack('<I', ptr_gmart_bye))
+        gmart_scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd MSG_NORMAL, waitmsg
+        gmart_scr.extend([0x6B, 0x02]) # release, end
+        ptr_goldenrod_mart_script = 0x08000000 + 0x01834000
+        f.seek(0x01834000); f.write(gmart_scr)
+
+        # Goldenrod Free Move Relearner Script (0x01834800)
+        txt_grelearner = encode_gen3("Olá, Campeão! Eu sou o Mestre dos Golpes de Goldenrod.\\pPosso ajudar qualquer um dos seus Pokémon a relembrar seus golpes esquecidos,\\ltotalmente de graça! Sem custo de cogumelos!")
+        ptr_grelearner_txt = 0x08000000 + 0x01834900
+        f.seek(0x01834900); f.write(txt_grelearner)
+
+        grelearner_scr = bytearray()
+        grelearner_scr.extend([0x6A, 0x5A]) # lock, faceplayer
+        grelearner_scr.extend([0x0F, 0x00])
+        grelearner_scr.extend(struct.pack('<I', ptr_grelearner_txt))
+        grelearner_scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd MSG_NORMAL, waitmsg
+        grelearner_scr.extend([0x05, 0xBE, 0x16, 0x17, 0x08]) # goto 0x081716BE (ChooseMonForMoveRelearner)
+        ptr_goldenrod_relearner_script = 0x08000000 + 0x01834800
+        f.seek(0x01834800); f.write(grelearner_scr)
+        print(f"  [HUB] Goldenrod Competitive Mart ({hex(ptr_goldenrod_mart_script)}) & Free Move Relearner ({hex(ptr_goldenrod_relearner_script)}) compiled!")
+
         # Bank 43 Events
         b43_events = {}
         # Map 0 (New Bark): Sailor at (11,9), Guide at (8,10), Elm Lab entrance door at (13,13)
@@ -1071,7 +1265,12 @@ def compile_engine():
         # Map 8 (Azalea Town): Azalea Gym door at (15, 15) -> Bank 44 Map 2 Warp 0
         b43_events[8] = make_events_block([], [pack_warp(15, 15, 3, 0, 2, 44)])
         # Map 10 (Goldenrod City): Whitney Gym door at (32, 28), Radio Tower at (14, 15)
-        b43_events[10] = make_events_block([], [
+        # Person 1: Competitive Mart Clerk at (16, 20), Sprite 0x18
+        # Person 2: Free Move Relearner at (20, 20), Sprite 0x17
+        b43_events[10] = make_events_block([
+            pack_person(1, 0x18, 16, 20, 3, 1, 0, ptr_goldenrod_mart_script),
+            pack_person(2, 0x17, 20, 20, 3, 1, 0, ptr_goldenrod_relearner_script)
+        ], [
             pack_warp(32, 28, 3, 0, 3, 44),
             pack_warp(14, 15, 3, 0, 9, 44)
         ])

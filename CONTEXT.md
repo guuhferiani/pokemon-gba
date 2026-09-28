@@ -93,8 +93,14 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
   * **HMs 100% Esquecíveis**: Qualquer golpe de HM pode ser deletado ou trocado a qualquer momento via TM ou nível sem ir ao Move Deleter.
   * **HMs de Campo Práticas (Cut, Rock Smash, Strength, Waterfall, Surf)**: Interação direta com o botão A nas árvores, rochas, pedras e água. Se nenhum Pokémon souber o golpe, o Pokémon líder da equipe executa a ação se você tiver a respectiva insígnia.
   * **Flash Automático**: Cavernas escuras (Rock Tunnel, Dark Cave, Whirl Islands) ficam sempre 100% iluminadas e nítidas.
+- Modificação 4: Lojas Competitivas, Relearner Gratuito e Rematch E4 Puro Gen 1 & 2:
+  * **Elite Four Rematches (Treinadores 735..741)**: Lorelei, Bruno, Agatha, Lance e Rival têm times 100% Gen 1 e Gen 2 (sem espécies de Hoenn) com níveis Lv 80 a 90, 6 Pokémon cada e IA inteligente competitiva (0x07).
+  * **Rematch Imediato Desbloqueado**: Flag `0x844` (`FLAG_SYS_CAN_LINK_WITH_RS`) é ativada pelo Prof. Carvalho logo após a Liga Índigo e no S.S. Aqua, liberando os rematches da E4 e compatibilidade sem necessidade de missões das Sevii Islands.
+  * **Celadon Dept Store 4F Expandida**: Vende todas as 10 pedras e itens evolutivos (Sol, Lua, Fogo, Raio, Água, Folha, King's Rock, Metal Coat, Dragon Scale, Up-Grade, Pedra Eterna) além de Doce Raro.
+  * **Move Relearner 100% Gratuito**: Ilha 2 (Two Island) e Goldenrod City relembram qualquer golpe do passado de graça sem cobrar cogumelos (bypass nos offsets `0x17163a`, `0x17164a` e `0x17170b`).
+  * **Hub Competitivo em Goldenrod City (Bank 43 Map 10)**: Dois NPCs dedicados no centro da cidade — Balconista de Mart Competitivo (vende pedras evolutivas, itens de segurar competitivos como Leftovers, Choice Band, Focus Band, Exp Share, vitaminas completas, Doce Raro e Master Ball a 50k) e o Lembrador de Golpes Gratuito.
 - Campanha Direta e Ágil: Transição direta pós-Liga de Kanto (Indigo Plateau) via S.S. Aqua (Porto de Vermilion) para Johto e Monte Silver (batalha com Gold), sem sidequests desnecessárias de Sevii Islands ✅
-- Suíte de 18 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
+- Suíte de 19 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos
