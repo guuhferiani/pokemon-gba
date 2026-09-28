@@ -1252,54 +1252,372 @@ def compile_engine():
         f.seek(0x01834800); f.write(grelearner_scr)
         print(f"  [HUB] Goldenrod Competitive Mart ({hex(ptr_goldenrod_mart_script)}) & Free Move Relearner ({hex(ptr_goldenrod_relearner_script)}) compiled!")
 
+        # ------------------------------------------------------------------
+        # 4D. MOD SYSTEM & OVERWORLD WILD POKEMON SCRIPTS (Offset 0x01828000 & 0x01835000)
+        # ------------------------------------------------------------------
+        # Mod Flags:
+        #   0x02E0: FLAG_HIDE_OVERWORLD_POKEMON (0 = Visible / Ativado, 1 = Hidden / Desativado)
+        #   0x02E1: FLAG_MOD_EXP_ALL (Exp All / Exp Share)
+        #   0x02E2: FLAG_MOD_NUZLOCKE (Modo Nuzlocke Desafio)
+        #   0x02E3: FLAG_MOD_LEVEL_CAP (Trava de Nivel por Insignia)
+        #
+        # A. Wild Overworld Encounter Script Generator (Offset 0x01828000)
+        WILD_SCRIPTS_ALLOC = 0x01828000
+        cur_wscr_off = WILD_SCRIPTS_ALLOC
+        wild_script_cache = {}
+
+        def get_wild_script_ptr(species_id, lvl):
+            nonlocal cur_wscr_off
+            key = (species_id, lvl)
+            if key in wild_script_cache:
+                return wild_script_cache[key]
+
+            ptr_scr = 0x08000000 + cur_wscr_off
+            scr = bytearray()
+            scr.extend([0x6A]) # lock
+            scr.extend([0x5A]) # faceplayer
+            scr.extend([0x30, species_id & 0xFF, (species_id >> 8) & 0xFF, 0x00, 0x00]) # playmoncry
+            scr.extend([0x33, species_id & 0xFF, (species_id >> 8) & 0xFF, 0x01, 0x00]) # waitmoncry
+            scr.extend([0xB6, species_id & 0xFF, (species_id >> 8) & 0xFF, lvl, 0x00, 0x00]) # setwildbattle
+            scr.extend([0x29, 0x07, 0x08]) # setflag 0x807 (special battle transition)
+            scr.extend([0x25, 0x38, 0x01]) # special 0x138 (Start wild battle)
+            scr.extend([0x27]) # waitstate
+            scr.extend([0x2A, 0x07, 0x08]) # clearflag 0x807
+            scr.extend([0x53, 0x0F, 0x80]) # disappearsprite VAR_LAST_TALKED (0x800F)
+            scr.extend([0x6B]) # release
+            scr.extend([0x02]) # end
+
+            f.seek(cur_wscr_off)
+            f.write(scr)
+            wild_script_cache[key] = ptr_scr
+            cur_wscr_off += len(scr)
+            if cur_wscr_off % 4 != 0:
+                cur_wscr_off += (4 - (cur_wscr_off % 4))
+            return ptr_scr
+
+        # B. Mod Attendant NPC Script & Strings (Offset 0x01835000)
+        MOD_SCRIPT_ALLOC = 0x01835000
+        cur_mstr_off = MOD_SCRIPT_ALLOC + 0x300
+
+        txt_mod_greet = encode_gen3(
+            "Olá, Treinador! Sou o Assistente Especial de Modificações do Jogo.\\p"
+            "Aqui você pode ativar ou desativar recursos especiais em sua aventura!"
+        )
+        txt_mod_q1 = encode_gen3(
+            "MOD 1: POKÉMON VISÍVEIS NO OVERWORLD.\\n"
+            "Permite ver os Pokémon selvagens andando na grama antes da batalha.\\p"
+            "Deseja ATIVAR este mod?"
+        )
+        txt_mod_q1_on = encode_gen3(
+            "Mod 1 ATIVADO! Os Pokémon selvagens agora caminham livremente pelo mapa!"
+        )
+        txt_mod_q1_off = encode_gen3(
+            "Mod 1 DESATIVADO! Os Pokémon overworld foram ocultados."
+        )
+        txt_mod_q2 = encode_gen3(
+            "MOD 2: EXP ALL (EXP COMPARTILHADO).\\n"
+            "Deseja receber um Exp. Share adicional para facilitar o treino da equipe?"
+        )
+        txt_mod_q2_yes = encode_gen3(
+            "Você recebeu um Exp. Share adicional para sua jornada!"
+        )
+        txt_mod_q3 = encode_gen3(
+            "MOD 3: MODO NUZLOCKE (FLAG 0x02E2).\\n"
+            "Ativa o registro oficial de desafio Nuzlocke.\\p"
+            "Deseja ATIVAR o Modo Nuzlocke?"
+        )
+        txt_mod_q3_on = encode_gen3(
+            "Modo Nuzlocke ATIVADO! Boa sorte em seu desafio!"
+        )
+        txt_mod_q3_off = encode_gen3(
+            "Modo Nuzlocke DESATIVADO!"
+        )
+        txt_mod_q4 = encode_gen3(
+            "MOD 4: TRAVA DE NÍVEL (LEVEL CAP).\\n"
+            "Define o limite máximo de nível de acordo com as insígnias.\\p"
+            "Deseja ATIVAR a Trava de Nível?"
+        )
+        txt_mod_q4_on = encode_gen3(
+            "Trava de Nível ATIVADA!"
+        )
+        txt_mod_q4_off = encode_gen3(
+            "Trava de Nível DESATIVADA!"
+        )
+        txt_mod_bye = encode_gen3(
+            "Configurações atualizadas com sucesso! Volte sempre que quiser ajustar seus Mods!"
+        )
+
+        mod_strings = [
+            txt_mod_greet, txt_mod_q1, txt_mod_q1_on, txt_mod_q1_off,
+            txt_mod_q2, txt_mod_q2_yes, txt_mod_q3, txt_mod_q3_on,
+            txt_mod_q3_off, txt_mod_q4, txt_mod_q4_on, txt_mod_q4_off,
+            txt_mod_bye
+        ]
+        mod_ptrs = []
+        for s in mod_strings:
+            ptr_s = 0x08000000 + cur_mstr_off
+            f.seek(cur_mstr_off)
+            f.write(s)
+            mod_ptrs.append(ptr_s)
+            cur_mstr_off += len(s)
+            if cur_mstr_off % 4 != 0:
+                cur_mstr_off += (4 - (cur_mstr_off % 4))
+
+        (ptr_mod_greet, ptr_mod_q1, ptr_mod_q1_on, ptr_mod_q1_off,
+         ptr_mod_q2, ptr_mod_q2_yes, ptr_mod_q3, ptr_mod_q3_on,
+         ptr_mod_q3_off, ptr_mod_q4, ptr_mod_q4_on, ptr_mod_q4_off,
+         ptr_mod_bye) = mod_ptrs
+
+        def assemble_mod_script(lbls):
+            scr = bytearray()
+            scr.extend([0x6A, 0x5A]) # lock, faceplayer
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_greet))
+            scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd MSG_NORMAL, waitmsg
+
+            # Q1: Overworld Pokemon
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q1))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00]) # compare VAR_RESULT, 0
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('q1_no', 0)))
+
+            # Q1 Yes: clearflag 0x02E0 (0 = Visible)
+            scr.extend([0x2A, 0xE0, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q1_on))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('q2', 0)))
+
+            # Q1 No: setflag 0x02E0 (1 = Hidden)
+            lbls['q1_no'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x29, 0xE0, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q1_off))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # Q2: Exp Share
+            lbls['q2'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q2))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('q3', 0)))
+
+            # Q2 Yes: additem 182, 1
+            scr.extend([0x47, 0xB6, 0x00, 0x01, 0x00])
+            scr.extend([0x2F, 0x1A, 0x01, 0x31]) # fanfare 0x11A, waitfanfare
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q2_yes))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # Q3: Nuzlocke
+            lbls['q3'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q3))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('q3_no', 0)))
+
+            # Q3 Yes: setflag 0x02E2
+            scr.extend([0x29, 0xE2, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q3_on))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('q4', 0)))
+
+            # Q3 No: clearflag 0x02E2
+            lbls['q3_no'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x2A, 0xE2, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q3_off))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # Q4: Level Cap
+            lbls['q4'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q4))
+            scr.extend([0x09, 0x05]) # MSG_YESNO
+            scr.extend([0x21, 0x0D, 0x80, 0x00, 0x00])
+            scr.extend([0x06, 0x01]); scr.extend(struct.pack('<I', lbls.get('q4_no', 0)))
+
+            # Q4 Yes: setflag 0x02E3
+            scr.extend([0x29, 0xE3, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q4_on))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+            scr.extend([0x05]); scr.extend(struct.pack('<I', lbls.get('closing', 0)))
+
+            # Q4 No: clearflag 0x02E3
+            lbls['q4_no'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x2A, 0xE3, 0x02])
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_q4_off))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+
+            # Closing
+            lbls['closing'] = 0x08000000 + MOD_SCRIPT_ALLOC + len(scr)
+            scr.extend([0x0F, 0x00]); scr.extend(struct.pack('<I', ptr_mod_bye))
+            scr.extend([0x09, 0x04, 0x6C, 0x02])
+            scr.extend([0x6B, 0x02]) # release, end
+            return scr
+
+        mod_lbls = {}
+        assemble_mod_script(mod_lbls) # Pass 1 to calculate label offsets
+        final_mod_script = assemble_mod_script(mod_lbls) # Pass 2 with resolved pointers
+        f.seek(MOD_SCRIPT_ALLOC)
+        f.write(final_mod_script)
+        ptr_mod_attendant_script = 0x08000000 + MOD_SCRIPT_ALLOC
+        print(f"  [MOD] Mod Attendant Script compiled at {hex(ptr_mod_attendant_script)} ({len(final_mod_script)} bytes)")
+
         # Bank 43 Events
         b43_events = {}
-        # Map 0 (New Bark): Sailor at (11,9), Guide at (8,10), Elm Lab entrance door at (13,13)
+        # Map 0 (New Bark): Sailor at (11,9), Guide at (8,10), Mod Attendant at (14,8), Elm Lab entrance door at (13,13)
         b43_events[0] = make_events_block(
             [pack_person(1, 0x3E, 11, 9, 3, 1, 0, ptr_jsail_script_start),
-             pack_person(2, 0x1A, 8, 10, 3, 1, 0, ptr_guide_script_start)],
+             pack_person(2, 0x1A, 8, 10, 3, 1, 0, ptr_guide_script_start),
+             pack_person(3, 0x19, 14, 8, 3, 1, 0, ptr_mod_attendant_script)],
             [pack_warp(13, 13, 3, 0, 0, 44)]
         )
-        # Map 5 (Violet City): Violet Gym door at (16, 16) -> Bank 44 Map 1 Warp 0
-        b43_events[5] = make_events_block([], [pack_warp(16, 16, 3, 0, 1, 44)])
-        # Map 8 (Azalea Town): Azalea Gym door at (15, 15) -> Bank 44 Map 2 Warp 0
-        b43_events[8] = make_events_block([], [pack_warp(15, 15, 3, 0, 2, 44)])
+        # Map 2 (Route 29): Sentret Lv 58 at (12, 10), Pidgey Lv 58 at (24, 12) (Roaming in grass, flag 0x02E0)
+        b43_events[2] = make_events_block([
+            pack_person(1, 119, 12, 10, 3, 8, 2, get_wild_script_ptr(161, 58), 0x02E0),
+            pack_person(2, 116, 24, 12, 3, 8, 2, get_wild_script_ptr(16, 58), 0x02E0)
+        ], [])
+        # Map 3 (Route 30): Caterpie Lv 59 at (10, 15), Ledyba Lv 59 at (18, 12)
+        b43_events[3] = make_events_block([
+            pack_person(1, 113, 10, 15, 3, 8, 2, get_wild_script_ptr(10, 59), 0x02E0),
+            pack_person(2, 113, 18, 12, 3, 8, 2, get_wild_script_ptr(165, 59), 0x02E0)
+        ], [])
+        # Map 4 (Route 31): Bellsprout Lv 60 at (15, 10), Mareep Lv 60 at (25, 12)
+        b43_events[4] = make_events_block([
+            pack_person(1, 123, 15, 10, 3, 8, 2, get_wild_script_ptr(69, 60), 0x02E0),
+            pack_person(2, 119, 25, 12, 3, 8, 2, get_wild_script_ptr(179, 60), 0x02E0)
+        ], [])
+        # Map 5 (Violet City): Mod Attendant at (18, 16), Violet Gym door at (16, 16) -> Bank 44 Map 1 Warp 0
+        b43_events[5] = make_events_block([
+            pack_person(1, 0x19, 18, 16, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(16, 16, 3, 0, 1, 44)])
+        # Map 6 (Route 32): Mareep Lv 62 at (14, 15), Wooper Lv 62 at (18, 20)
+        b43_events[6] = make_events_block([
+            pack_person(1, 119, 14, 15, 3, 8, 2, get_wild_script_ptr(179, 62), 0x02E0),
+            pack_person(2, 121, 18, 20, 3, 8, 2, get_wild_script_ptr(194, 62), 0x02E0)
+        ], [])
+        # Map 7 (Route 33): Geodude Lv 64 at (12, 10), Zubat Lv 64 at (16, 12)
+        b43_events[7] = make_events_block([
+            pack_person(1, 130, 12, 10, 3, 8, 2, get_wild_script_ptr(74, 64), 0x02E0),
+            pack_person(2, 110, 16, 12, 3, 8, 2, get_wild_script_ptr(41, 64), 0x02E0)
+        ], [])
+        # Map 8 (Azalea Town): Mod Attendant at (18, 15), Azalea Gym door at (15, 15) -> Bank 44 Map 2 Warp 0
+        b43_events[8] = make_events_block([
+            pack_person(1, 0x19, 18, 15, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(15, 15, 3, 0, 2, 44)])
+        # Map 9 (Route 34): Abra Lv 66 at (12, 14), Ditto Lv 66 at (18, 18)
+        b43_events[9] = make_events_block([
+            pack_person(1, 120, 12, 14, 3, 8, 2, get_wild_script_ptr(63, 66), 0x02E0),
+            pack_person(2, 113, 18, 18, 3, 8, 2, get_wild_script_ptr(132, 66), 0x02E0)
+        ], [])
         # Map 10 (Goldenrod City): Whitney Gym door at (32, 28), Radio Tower at (14, 15)
         # Person 1: Competitive Mart Clerk at (16, 20), Sprite 0x18
         # Person 2: Free Move Relearner at (20, 20), Sprite 0x17
+        # Person 3: Mod Attendant at (18, 20), Sprite 0x19
         b43_events[10] = make_events_block([
             pack_person(1, 0x18, 16, 20, 3, 1, 0, ptr_goldenrod_mart_script),
-            pack_person(2, 0x17, 20, 20, 3, 1, 0, ptr_goldenrod_relearner_script)
+            pack_person(2, 0x17, 20, 20, 3, 1, 0, ptr_goldenrod_relearner_script),
+            pack_person(3, 0x19, 18, 20, 3, 1, 0, ptr_mod_attendant_script)
         ], [
             pack_warp(32, 28, 3, 0, 3, 44),
             pack_warp(14, 15, 3, 0, 9, 44)
         ])
-        # Map 12 (Route 36): Sudowoodo blocking crossroad at (20, 10), Flag 0x02D1
+        # Map 11 (Route 35): Yanma Lv 68 at (12, 14), Psyduck Lv 68 at (16, 18)
+        b43_events[11] = make_events_block([
+            pack_person(1, 113, 12, 14, 3, 8, 2, get_wild_script_ptr(193, 68), 0x02E0),
+            pack_person(2, 121, 16, 18, 3, 8, 2, get_wild_script_ptr(54, 68), 0x02E0)
+        ], [])
+        # Map 12 (Route 36): Sudowoodo at (20, 10), Vulpix Lv 70 at (14, 12), Growlithe Lv 70 at (24, 14)
         b43_events[12] = make_events_block([
-            pack_person(1, 0x6D, 20, 10, 3, 1, 0, leg_script_ptrs['sudowoodo'], 0x02D1)
+            pack_person(1, 0x6D, 20, 10, 3, 1, 0, leg_script_ptrs['sudowoodo'], 0x02D1),
+            pack_person(2, 125, 14, 12, 3, 8, 2, get_wild_script_ptr(37, 70), 0x02E0),
+            pack_person(3, 119, 24, 14, 3, 8, 2, get_wild_script_ptr(58, 70), 0x02E0)
+        ], [])
+        # Map 13 (Route 37): Pidgeotto Lv 72 at (12, 14), Stantler Lv 72 at (18, 16)
+        b43_events[13] = make_events_block([
+            pack_person(1, 116, 12, 14, 3, 8, 2, get_wild_script_ptr(17, 72), 0x02E0),
+            pack_person(2, 119, 18, 16, 3, 8, 2, get_wild_script_ptr(234, 72), 0x02E0)
         ], [])
         # Map 14 (Ecruteak City): Morty Gym (44, 4), Bell Tower (44, 12), Burned Tower (44, 13)
-        b43_events[14] = make_events_block([], [
+        # Person 1: Mod Attendant at (22, 18)
+        b43_events[14] = make_events_block([
+            pack_person(1, 0x19, 22, 18, 3, 1, 0, ptr_mod_attendant_script)
+        ], [
             pack_warp(20, 18, 3, 0, 4, 44),
             pack_warp(18, 5, 3, 0, 12, 44),
             pack_warp(8, 5, 3, 0, 13, 44)
         ])
-        # Map 17 (Olivine City): Jasmine Gym door at (18, 18) -> Bank 44 Map 6 Warp 0
-        b43_events[17] = make_events_block([], [pack_warp(18, 18, 3, 0, 6, 44)])
-        # Map 19 (Route 41): Whirl Islands Depths entrance at (10, 10) -> Bank 44 Map 11 Warp 0
-        b43_events[19] = make_events_block([], [pack_warp(10, 10, 3, 0, 11, 44)])
-        # Map 20 (Cianwood City): Chuck Gym door at (12, 12) -> Bank 44 Map 5 Warp 0
-        b43_events[20] = make_events_block([], [pack_warp(12, 12, 3, 0, 5, 44)])
-        # Map 22 (Mahogany Town): Pryce Gym door at (14, 14) -> Bank 44 Map 7 Warp 0
-        b43_events[22] = make_events_block([], [pack_warp(14, 14, 3, 0, 7, 44)])
+        # Map 15 (Route 38): Miltank Lv 74 at (14, 12), Tauros Lv 74 at (22, 14)
+        b43_events[15] = make_events_block([
+            pack_person(1, 119, 14, 12, 3, 8, 2, get_wild_script_ptr(241, 74), 0x02E0),
+            pack_person(2, 119, 22, 14, 3, 8, 2, get_wild_script_ptr(128, 74), 0x02E0)
+        ], [])
+        # Map 16 (Route 39): Miltank Lv 75 at (12, 14), Electabuzz Lv 75 at (18, 16)
+        b43_events[16] = make_events_block([
+            pack_person(1, 119, 12, 14, 3, 8, 2, get_wild_script_ptr(241, 75), 0x02E0),
+            pack_person(2, 130, 18, 16, 3, 8, 2, get_wild_script_ptr(125, 75), 0x02E0)
+        ], [])
+        # Map 17 (Olivine City): Mod Attendant at (20, 18), Jasmine Gym door at (18, 18) -> Bank 44 Map 6 Warp 0
+        b43_events[17] = make_events_block([
+            pack_person(1, 0x19, 20, 18, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(18, 18, 3, 0, 6, 44)])
+        # Map 18 (Route 40): Tentacool Lv 76 at (12, 14), Lapras Lv 76 at (18, 18)
+        b43_events[18] = make_events_block([
+            pack_person(1, 135, 12, 14, 3, 8, 2, get_wild_script_ptr(72, 76), 0x02E0),
+            pack_person(2, 135, 18, 18, 3, 8, 2, get_wild_script_ptr(131, 76), 0x02E0)
+        ], [])
+        # Map 19 (Route 41): Whirl Islands entrance at (10, 10), Mantine Lv 77 at (14, 14), Lapras Lv 77 at (20, 16)
+        b43_events[19] = make_events_block([
+            pack_person(1, 135, 14, 14, 3, 8, 2, get_wild_script_ptr(226, 77), 0x02E0),
+            pack_person(2, 135, 20, 16, 3, 8, 2, get_wild_script_ptr(131, 77), 0x02E0)
+        ], [pack_warp(10, 10, 3, 0, 11, 44)])
+        # Map 20 (Cianwood City): Mod Attendant at (14, 12), Chuck Gym door at (12, 12) -> Bank 44 Map 5 Warp 0
+        b43_events[20] = make_events_block([
+            pack_person(1, 0x19, 14, 12, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(12, 12, 3, 0, 5, 44)])
+        # Map 21 (Route 42): Flaaffy Lv 78 at (14, 12), Marill Lv 78 at (22, 14)
+        b43_events[21] = make_events_block([
+            pack_person(1, 119, 14, 12, 3, 8, 2, get_wild_script_ptr(180, 78), 0x02E0),
+            pack_person(2, 121, 22, 14, 3, 8, 2, get_wild_script_ptr(183, 78), 0x02E0)
+        ], [])
+        # Map 22 (Mahogany Town): Mod Attendant at (16, 14), Pryce Gym door at (14, 14) -> Bank 44 Map 7 Warp 0
+        b43_events[22] = make_events_block([
+            pack_person(1, 0x19, 16, 14, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(14, 14, 3, 0, 7, 44)])
+        # Map 23 (Route 43): Girafarig Lv 80 at (14, 14), Mareep Lv 80 at (20, 16)
+        b43_events[23] = make_events_block([
+            pack_person(1, 119, 14, 14, 3, 8, 2, get_wild_script_ptr(203, 80), 0x02E0),
+            pack_person(2, 119, 20, 16, 3, 8, 2, get_wild_script_ptr(179, 80), 0x02E0)
+        ], [])
         # Map 24 (Lake of Rage): Red Gyarados Lv 75 at (14, 14), Flag 0x02D0
         b43_events[24] = make_events_block([
             pack_person(1, 0x5B, 14, 14, 3, 1, 0, leg_script_ptrs['gyarados'], 0x02D0)
         ], [])
-        # Map 26 (Blackthorn City): Clair Gym door at (20, 20) -> Bank 44 Map 8 Warp 0
-        b43_events[26] = make_events_block([], [pack_warp(20, 20, 3, 0, 8, 44)])
+        # Map 25 (Route 44): Tangela Lv 82 at (14, 12), Poliwag Lv 82 at (22, 14)
+        b43_events[25] = make_events_block([
+            pack_person(1, 113, 14, 12, 3, 8, 2, get_wild_script_ptr(114, 82), 0x02E0),
+            pack_person(2, 121, 22, 14, 3, 8, 2, get_wild_script_ptr(60, 82), 0x02E0)
+        ], [])
+        # Map 26 (Blackthorn City): Mod Attendant at (22, 20), Clair Gym door at (20, 20) -> Bank 44 Map 8 Warp 0
+        b43_events[26] = make_events_block([
+            pack_person(1, 0x19, 22, 20, 3, 1, 0, ptr_mod_attendant_script)
+        ], [pack_warp(20, 20, 3, 0, 8, 44)])
+        # Map 27 (Route 45): Phanpy Lv 84 at (12, 14), Gligar Lv 84 at (18, 16)
+        b43_events[27] = make_events_block([
+            pack_person(1, 130, 12, 14, 3, 8, 2, get_wild_script_ptr(231, 84), 0x02E0),
+            pack_person(2, 110, 18, 16, 3, 8, 2, get_wild_script_ptr(207, 84), 0x02E0)
+        ], [])
+        # Map 28 (Route 46): Geodude Lv 85 at (12, 12), Rattata Lv 85 at (18, 14)
+        b43_events[28] = make_events_block([
+            pack_person(1, 130, 12, 12, 3, 8, 2, get_wild_script_ptr(74, 85), 0x02E0),
+            pack_person(2, 119, 18, 14, 3, 8, 2, get_wild_script_ptr(19, 85), 0x02E0)
+        ], [])
+        # Map 29 (Route 28): Snorlax Lv 88 at (14, 12), Dodrio Lv 88 at (22, 14)
+        b43_events[29] = make_events_block([
+            pack_person(1, 109, 14, 12, 3, 8, 2, get_wild_script_ptr(143, 88), 0x02E0),
+            pack_person(2, 110, 22, 14, 3, 8, 2, get_wild_script_ptr(85, 88), 0x02E0)
+        ], [])
         # Map 30 (Mt. Silver Exterior): Summit Cave entrance at (12, 5) -> Bank 44 Map 10 Warp 0
-        b43_events[30] = make_events_block([], [pack_warp(12, 5, 3, 0, 10, 44)])
+        # Wild Tyranitar Lv 92 at (16, 12), Ursaring Lv 92 at (24, 14)
+        b43_events[30] = make_events_block([
+            pack_person(1, 130, 16, 12, 3, 8, 2, get_wild_script_ptr(248, 92), 0x02E0),
+            pack_person(2, 130, 24, 14, 3, 8, 2, get_wild_script_ptr(217, 92), 0x02E0)
+        ], [pack_warp(12, 5, 3, 0, 10, 44)])
 
         # Bank 44 Events (Interiors, Gyms & Legendary Dungeons)
         b44_events = {}
@@ -1380,8 +1698,115 @@ def compile_engine():
         print(f"  [EVENTS] Map Events successfully compiled at {hex(MAP_EVENTS_ALLOC)} (Gyms + Legendary Dungeons armed)")
 
         # ------------------------------------------------------------------
-        # 6. PASSO 2: JOHTO CONTINUOUS OVERWORLD MAP CONNECTIONS (0x01930000)
+        # 5B. KANTO POKEMON CENTERS & OVERWORLD ROAMING POKEMON INJECTION
         # ------------------------------------------------------------------
+        # A. Inject Mod Attendant (Sprite 0x19 Aide) in all 10 Kanto Centers + Route Centers
+        # B. Inject Overworld Wild Pokemon (Wander movement, Flag 0x02E0) on Kanto Routes
+        KANTO_EVENTS_ALLOC = 0x01850000
+        cur_kanto_p_off = KANTO_EVENTS_ALLOC
+
+        # Read original map bank pointers
+        f.seek(0x3526a8)
+        kanto_bank_ptrs = [struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF for _ in range(43)]
+
+        # Centers: Viridian, Pewter, Cerulean, Vermilion, Celadon, Fuchsia, Cinnabar, Indigo, Saffron, Lavender, Route 4, Route 10
+        kanto_centers = [
+            ('Viridian Center', 5, 4, 2, 6),
+            ('Pewter Center', 6, 5, 2, 6),
+            ('Cerulean Center', 7, 3, 2, 6),
+            ('Vermilion Center', 8, 0, 2, 6),
+            ('Celadon Center', 9, 1, 2, 6),
+            ('Fuchsia Center', 10, 12, 2, 6),
+            ('Cinnabar Center', 11, 5, 2, 6),
+            ('Indigo Center', 12, 5, 2, 6),
+            ('Saffron Center', 13, 0, 15, 12),
+            ('Lavender Center', 14, 6, 2, 6),
+            ('Route 4 Center', 16, 0, 2, 6),
+            ('Route 10 Center', 21, 0, 2, 6),
+        ]
+
+        for cname, cb, cm, cx, cy in kanto_centers:
+            f.seek(kanto_bank_ptrs[cb] + cm * 4)
+            mhdr_ptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(mhdr_ptr + 4)
+            ev_ptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(ev_ptr)
+            np = struct.unpack('<B', f.read(1))[0]
+            f.seek(ev_ptr + 4)
+            pptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(pptr)
+            existing_people = [f.read(24) for _ in range(np)]
+
+            # Mod Attendant: Local ID np+1, Sprite 0x19 (Aide), Pos (cx, cy), Movement 1 (Look down), Flag 0 (Always visible)
+            new_person = pack_person(np + 1, 0x19, cx, cy, 3, 1, 0, ptr_mod_attendant_script, 0)
+            expanded_people = existing_people + [new_person]
+
+            # Write expanded people array to 32MB space
+            new_pptr = 0x08000000 + cur_kanto_p_off
+            f.seek(cur_kanto_p_off)
+            for p in expanded_people:
+                f.write(p)
+            cur_kanto_p_off += len(expanded_people) * 24
+            if cur_kanto_p_off % 4 != 0:
+                cur_kanto_p_off += (4 - (cur_kanto_p_off % 4))
+
+            # Update event block header
+            f.seek(ev_ptr)
+            f.write(struct.pack('<B', len(expanded_people)))
+            f.seek(ev_ptr + 4)
+            f.write(struct.pack('<I', new_pptr))
+
+        print(f"  [MOD] Mod Attendant (Sprite 0x19) successfully injected into all {len(kanto_centers)} Kanto Pokemon Centers!")
+
+        # Kanto Routes Overworld Pokemon
+        # (name, bank, map, [(species_id, level, pic, x, y), ...])
+        kanto_routes = [
+            ('Route 1', 3, 19, [(16, 3, 116, 14, 11), (19, 3, 110, 12, 29)]),
+            ('Route 2', 3, 20, [(25, 5, 120, 12, 9), (16, 4, 116, 12, 60)]),
+            ('Viridian Forest', 1, 0, [(25, 6, 120, 16, 20), (12, 7, 113, 20, 40)]),
+            ('Route 22', 3, 40, [(21, 4, 110, 4, 8), (32, 4, 123, 4, 20)]),
+            ('Route 3', 3, 21, [(39, 8, 115, 79, 10), (21, 8, 110, 55, 12)]),
+            ('Route 4', 3, 22, [(35, 10, 113, 54, 10), (54, 11, 121, 95, 13)]),
+            ('Route 24', 3, 42, [(63, 12, 120, 18, 48), (69, 13, 123, 14, 74)]),
+            ('Route 11', 3, 29, [(96, 15, 128, 38, 8), (52, 15, 125, 64, 10)]),
+        ]
+
+        total_kanto_wild = 0
+        for rname, rb, rm, rmons in kanto_routes:
+            f.seek(kanto_bank_ptrs[rb] + rm * 4)
+            mhdr_ptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(mhdr_ptr + 4)
+            ev_ptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(ev_ptr)
+            np = struct.unpack('<B', f.read(1))[0]
+            f.seek(ev_ptr + 4)
+            pptr = struct.unpack('<I', f.read(4))[0] & 0x01FFFFFF
+            f.seek(pptr)
+            existing_people = [f.read(24) for _ in range(np)]
+
+            new_wild_people = []
+            for i, (w_sp, w_lvl, w_pic, wx, wy) in enumerate(rmons):
+                w_scr = get_wild_script_ptr(w_sp, w_lvl)
+                # Movement 8 (Wander), Range 2, Flag 0x02E0 (FLAG_HIDE_OVERWORLD_POKEMON)
+                new_wild_people.append(pack_person(np + 1 + i, w_pic, wx, wy, 3, 8, 2, w_scr, 0x02E0))
+                total_kanto_wild += 1
+
+            expanded_route_people = existing_people + new_wild_people
+            new_pptr = 0x08000000 + cur_kanto_p_off
+            f.seek(cur_kanto_p_off)
+            for p in expanded_route_people:
+                f.write(p)
+            cur_kanto_p_off += len(expanded_route_people) * 24
+            if cur_kanto_p_off % 4 != 0:
+                cur_kanto_p_off += (4 - (cur_kanto_p_off % 4))
+
+            # Update event block header
+            f.seek(ev_ptr)
+            f.write(struct.pack('<B', len(expanded_route_people)))
+            f.seek(ev_ptr + 4)
+            f.write(struct.pack('<I', new_pptr))
+
+        print(f"  [MOD] Injected {total_kanto_wild} roaming Overworld Pokemon across {len(kanto_routes)} Kanto Routes at {hex(KANTO_EVENTS_ALLOC)} (Flag 0x02E0)!")
         MAP_CONNS_ALLOC = 0x01930000
         cur_conn_off = MAP_CONNS_ALLOC
 

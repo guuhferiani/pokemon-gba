@@ -99,8 +99,19 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
   * **Celadon Dept Store 4F Expandida**: Vende todas as 10 pedras e itens evolutivos (Sol, Lua, Fogo, Raio, Água, Folha, King's Rock, Metal Coat, Dragon Scale, Up-Grade, Pedra Eterna) além de Doce Raro.
   * **Move Relearner 100% Gratuito**: Ilha 2 (Two Island) e Goldenrod City relembram qualquer golpe do passado de graça sem cobrar cogumelos (bypass nos offsets `0x17163a`, `0x17164a` e `0x17170b`).
   * **Hub Competitivo em Goldenrod City (Bank 43 Map 10)**: Dois NPCs dedicados no centro da cidade — Balconista de Mart Competitivo (vende pedras evolutivas, itens de segurar competitivos como Leftovers, Choice Band, Focus Band, Exp Share, vitaminas completas, Doce Raro e Master Ball a 50k) e o Lembrador de Golpes Gratuito.
+- Modificação 5: Sistema de Mods com NPC Especial nos Centros Pokémon e Pokémon Selvagens Visíveis no Overworld:
+  * **NPC Especial de Mods (Assistente / Sprite 0x19 Aide)**: Presente em **todos os 10 Centros Pokémon de Kanto** (Viridian, Pewter, Cerulean, Vermilion, Celadon, Fuchsia, Cinnabar, Indigo Plateau, Saffron, Lavender + Centros das Rotas 4 e 10) e nas cidades de Johto (New Bark, Violet, Azalea, Goldenrod, Ecruteak, Olivine, Cianwood, Mahogany, Blackthorn).
+  * **Menu Interativo de Mods**: O assistente oferece um diálogo nativo com caixas de Sim/Não para configurar os mods a qualquer momento:
+    - **Mod 1: Pokémon Selvagens no Overworld (Flag 0x02E0)**: Permite ver os Pokémon selvagens andando e vagando pela grama alta e água antes de entrar em batalha. Se ativado (flag limpa), os Pokémon caminham livremente; se desativado (flag setada), eles ficam ocultos.
+    - **Mod 2: Exp All (Exp Compartilhado)**: O assistente entrega um Exp. Share adicional para facilitar o treinamento de toda a equipe.
+    - **Mod 3: Modo Nuzlocke (Flag 0x02E2)**: Ativa/desativa a flag de desafio de Nuzlocke.
+    - **Mod 4: Trava de Nível / Level Cap (Flag 0x02E3)**: Ativa/desativa a flag de limite de nível baseado nas insígnias conquistadas.
+  * **Pokémon Selvagens Visíveis no Mapa**:
+    - Espécies selvagens clássicas (Pikachu, Pidgey, Rattata, Sentret, Mareep, Lapras, Snorlax, Clefairy, Jigglypuff, etc.) colocadas fisicamente na grama alta das rotas de Kanto (1, 2, Floresta de Viridian, 22, 3, 4, 24, 11) e de Johto (Rotas 29 a 46 e Monte Silver).
+    - Movimento autônomo e orgânico de caminhada (`movement_type = 8`, `range = 2`).
+    - Ao interagir (botão A), reproduz o rugido (cry) do Pokémon, inicia batalha selvagem direta (`special 0x138`) e ao ser capturado ou derrotado, o Pokémon desaparece na hora (`disappearsprite VAR_LAST_TALKED`), respawnando ao recarregar o mapa.
 - Campanha Direta e Ágil: Transição direta pós-Liga de Kanto (Indigo Plateau) via S.S. Aqua (Porto de Vermilion) para Johto e Monte Silver (batalha com Gold), sem sidequests desnecessárias de Sevii Islands ✅
-- Suíte de 19 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
+- Suíte de 20 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos
