@@ -80,9 +80,11 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - National Dex nativa sempre ativa ✅
 - Checksum GBA de cabeçalho válido para Android ✅
 - Tela de título customizada (Charizard vs Lugia) ✅
-- Evoluções sem Troca (Modificação 1): Alakazam, Machamp, Golem, Gengar, Steelix, Scizor, Kingdra, Slowking, Politoed, Porygon2 e Clamperl por nível ou uso direto de itens da Bag ✅
-- Eventos Lendários de Johto (Modificação 2): Gyarados Vermelho (Lago da Fúria Lv 75 com drop da Escama Vermelha), Sudowoodo (Rota 36 Lv 60), Lugia (Whirl Islands Lv 85), Ho-Oh (Bell Tower Lv 85) e o Trio de Feras (Raikou, Entei, Suicune Lv 80 na Torre Queimada) 100% ativos com diálogos PT-BR ✅
+- Evoluções sem Troca: 10 espécies clássicas de Kanto e Johto (Alakazam, Machamp, Golem, Gengar, Steelix, Scizor, Kingdra, Slowking, Politoed, Porygon2) por nível ou uso direto de itens da Bag (King's Rock, Metal Coat, Dragon Scale, Up-Grade) ✅
+- Experiência Pura Kanto + Johto (100% Gen 1 & 2): Remoção total de espécies e itens da Gen 3 (Hoenn). Dusclops de Morty substituído por Haunter; Walrein de Pryce substituído por Dewgong. Clamperl, Dente do Mar e Escama do Mar removidos. Todos os 10 chefes, 164 tabelas selvagens e 11 lendários/estáticos usam estritamente espécies 1..251 ✅
+- Eventos Lendários de Johto: Gyarados Vermelho (Lago da Fúria Lv 75 com drop da Escama Vermelha), Sudowoodo (Rota 36 Lv 60), Lugia (Whirl Islands Lv 85), Ho-Oh (Bell Tower Lv 85) e o Trio de Feras (Raikou, Entei, Suicune Lv 80 na Torre Queimada) 100% ativos com diálogos PT-BR ✅
 - Preservação total dos 4 Lendários originais de Kanto (Articuno, Zapdos, Moltres, Mewtwo) garantida e verificada ✅
+- Campanha Direta e Ágil: Transição direta pós-Liga de Kanto (Indigo Plateau) via S.S. Aqua (Porto de Vermilion) para Johto e Monte Silver (batalha com Gold), sem sidequests desnecessárias de Sevii Islands ✅
 - Suíte de 17 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 

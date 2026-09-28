@@ -79,7 +79,7 @@ def encode_gen3(text, length=None):
         return bytes(b[:length])
     return bytes(b)
 
-# Gen 3 Species IDs
+# Gen 1 & Gen 2 Species IDs (100% pure Kanto/Johto, 1..251)
 SPECIES = {
     'BULBASAUR': 1, 'IVYSAUR': 2, 'VENUSAUR': 3, 'CHARMANDER': 4, 'CHARIZARD': 6,
     'SQUIRTLE': 7, 'BLASTOISE': 9, 'PIDGEY': 16, 'PIDGEOT': 18, 'RATTATA': 19,
@@ -88,8 +88,9 @@ SPECIES = {
     'ODDISH': 43, 'PARAS': 46, 'MEOWTH': 52, 'PSYDUCK': 54, 'PRIMEAPE': 57,
     'GROWLITHE': 58, 'POLIWAG': 60, 'POLIWHIRL': 61, 'POLIWRATH': 62, 'ABRA': 63,
     'ALAKAZAM': 65, 'MACHAMP': 68, 'BELLSPROUT': 69, 'TENTACOOL': 72, 'TENTACRUEL': 73,
-    'GEODUDE': 74, 'GRAVELER': 75, 'MAGNETON': 82, 'GASTLY': 92, 'GENGAR': 94,
-    'ONIX': 95, 'DROWZEE': 96, 'VOLTORB': 100, 'CHANSEY': 113, 'HORSEA': 116,
+    'GEODUDE': 74, 'GRAVELER': 75, 'MAGNETON': 82, 'DEWGONG': 87, 'GASTLY': 92,
+    'HAUNTER': 93, 'GENGAR': 94, 'ONIX': 95, 'DROWZEE': 96, 'VOLTORB': 100,
+    'WEEZING': 110, 'CHANSEY': 113, 'HORSEA': 116,
     'SEADRA': 117, 'STARYU': 120, 'SCYTHER': 123, 'JYNX': 124, 'MAGMAR': 126,
     'PINSIR': 127, 'TAUROS': 128, 'MAGIKARP': 129, 'GYARADOS': 130, 'LAPRAS': 131,
     'DITTO': 132, 'EEVEE': 133, 'SNORLAX': 143, 'DRATINI': 147, 'DRAGONAIR': 148,
@@ -111,9 +112,7 @@ SPECIES = {
     'PORYGON2': 233, 'STANTLER': 234, 'SMEARGLE': 235, 'TYROGUE': 236, 'HITMONTOP': 237,
     'SMOOCHUM': 238, 'ELEKID': 239, 'MAGBY': 240, 'MILTANK': 241, 'BLISSEY': 242,
     'RAIKOU': 243, 'ENTEI': 244, 'SUICUNE': 245, 'LARVITAR': 246, 'PUPITAR': 247,
-    'TYRANITAR': 248, 'LUGIA': 249, 'HO_OH': 250, 'CELEBI': 251,
-    # Hoenn / Gen 3
-    'DUSCLOPS': 356, 'WALREIN': 365
+    'TYRANITAR': 248, 'LUGIA': 249, 'HO_OH': 250, 'CELEBI': 251
 }
 
 # Gen 3 Move IDs
@@ -124,7 +123,7 @@ MOVES = {
     'EXPLOSION': 153, 'ROCK_SLIDE': 157, 'SPIKES': 191, 'DESTINY_BOND': 194, 'ROLLOUT': 205,
     'MILK_DRINK': 208, 'STEEL_WING': 211, 'ATTRACT': 213, 'DYNAMIC_PUNCH': 223, 'MEGAHORN': 224,
     'IRON_TAIL': 231, 'CROSS_CHOP': 238, 'SHADOW_BALL': 247, 'BRICK_BREAK': 280, 'SILVER_WIND': 318,
-    'AERIAL_ACE': 332, 'DRAGON_CLAW': 337, 'DRAGON_DANCE': 349, 'ROOST': 355, 'AEROBLAST': 177,
+    'SIGNAL_BEAM': 324, 'AERIAL_ACE': 332, 'DRAGON_CLAW': 337, 'DRAGON_DANCE': 349, 'ROOST': 355, 'AEROBLAST': 177,
     'SACRED_FIRE': 221, 'BRAVE_BIRD': 332, 'RECOVER': 105, 'THUNDER_PUNCH': 9, 'SWIFT': 129,
     'SOLAR_BEAM': 76, 'SYNTHESIS': 235, 'FLASH_CANNON': 332, 'THUNDER_WAVE': 86,
     'FIRE_BLAST': 126, 'SLUDGE_BOMB': 188, 'CRUNCH': 242
@@ -159,7 +158,7 @@ JOHTO_LEADERS = [
     {
         'id': 'morty', 'name': 'MORTY', 'city': 'Ecruteak City', 'badge': 'Fog',
         'party': [
-            {'species': 'DUSCLOPS', 'lvl': 70, 'moves': ['SHADOW_BALL', 'CONFUSE_RAY', 'EARTHQUAKE', 'BLIZZARD']},
+            {'species': 'HAUNTER', 'lvl': 70, 'moves': ['SHADOW_BALL', 'SLUDGE_BOMB', 'CONFUSE_RAY', 'THUNDERBOLT']},
             {'species': 'MISDREAVUS', 'lvl': 71, 'moves': ['SHADOW_BALL', 'PSYCHIC', 'THUNDERBOLT', 'HYPNOSIS']},
             {'species': 'GENGAR', 'lvl': 73, 'moves': ['SHADOW_BALL', 'THUNDERBOLT', 'PSYCHIC', 'DESTINY_BOND']},
         ]
@@ -183,7 +182,7 @@ JOHTO_LEADERS = [
     {
         'id': 'pryce', 'name': 'PRYCE', 'city': 'Mahogany Town', 'badge': 'Glacier',
         'party': [
-            {'species': 'WALREIN', 'lvl': 81, 'moves': ['SURF', 'BLIZZARD', 'BODY_SLAM', 'EARTHQUAKE']},
+            {'species': 'DEWGONG', 'lvl': 81, 'moves': ['SURF', 'ICE_BEAM', 'BODY_SLAM', 'SIGNAL_BEAM']},
             {'species': 'LAPRAS', 'lvl': 82, 'moves': ['SURF', 'ICE_BEAM', 'THUNDERBOLT', 'CONFUSE_RAY']},
             {'species': 'PILOSWINE', 'lvl': 83, 'moves': ['EARTHQUAKE', 'BLIZZARD', 'ROCK_SLIDE', 'BODY_SLAM']},
         ]
@@ -225,7 +224,7 @@ def build_party_bytes(party_list):
         iv = 250
         moves = [MOVES.get(m, 0) for m in mon.get('moves', [])]
         while len(moves) < 4: moves.append(0)
-        data.extend(struct.pack('<HBBH4H', iv, lvl, 0, spec_id, moves[0], moves[1], moves[2], moves[3]))
+        data.extend(struct.pack('<HBBH4HH', iv, lvl, 0, spec_id, moves[0], moves[1], moves[2], moves[3], 0))
     return bytes(data)
 
 def compile_engine():
@@ -1710,7 +1709,6 @@ def compile_engine():
         #  - Slowpoke -> Slowking (King's Rock direct use, Water Stone or Slowbro at Lv 37)
         #  - Poliwhirl -> Politoed (King's Rock direct use, Lv 38 or Poliwrath with Water Stone)
         #  - Porygon -> Porygon2 (Up-Grade direct use or Lv 35)
-        #  - Clamperl -> Huntail (DeepSeaTooth) / Gorebyss (DeepSeaScale)
         EVO_TABLE_OFF = 0x259754
         TRADE_EVOS = [
             (64,  [(4, 38, 65),  (7, 94, 65)]),       # Kadabra -> Alakazam (Lv 38 or Moon Stone)
@@ -1723,7 +1721,6 @@ def compile_engine():
             (79,  [(4, 37, 80),  (7, 187, 199), (7, 97, 199)]),  # Slowpoke -> Slowbro (Lv 37), Slowking (King's Rock / Water Stone)
             (61,  [(7, 97, 62),  (7, 187, 186), (4, 38, 186)]),  # Poliwhirl -> Poliwrath (Water Stone), Politoed (King's Rock / Lv 38)
             (137, [(7, 218, 233), (4, 35, 233)]),     # Porygon -> Porygon2 (Up-Grade or Lv 35)
-            (366, [(7, 192, 367), (7, 193, 368)]),     # Clamperl -> Huntail (Tooth), Gorebyss (Scale)
         ]
 
         for sp_id, evos in TRADE_EVOS:
@@ -1736,9 +1733,9 @@ def compile_engine():
             f.write(packed_evos)
 
         # Enable field "USAR" (ItemUseOutOfBattle_EvolutionStone = 0x080A1751) on special evolution items:
-        # Items: 187 (King's Rock), 192 (DeepSeaTooth), 193 (DeepSeaScale), 199 (Metal Coat), 201 (Dragon Scale), 218 (Up-Grade)
+        # Items: 187 (King's Rock), 199 (Metal Coat), 201 (Dragon Scale), 218 (Up-Grade)
         ITEM_TABLE_OFF = 0x3db028
-        EVO_ITEMS_TO_ENABLE = [187, 192, 193, 199, 201, 218]
+        EVO_ITEMS_TO_ENABLE = [187, 199, 201, 218]
         for it_id in EVO_ITEMS_TO_ENABLE:
             it_off = ITEM_TABLE_OFF + it_id * 44
             # byte 27: type = 1 (Evolution Item / Stone)

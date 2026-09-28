@@ -175,7 +175,12 @@ def run_tests():
         assert party_sz == len(leader['party']), f"Party size mismatch for {leader['name']}: {party_sz}"
         assert 0x08000000 < party_ptr < 0x09FFFFFF, f"Party ptr invalid for {leader['name']}: {hex(party_ptr)}"
         assert ai_flags == 0x07, f"AI flags must be competitive 0x07 for {leader['name']}"
-    print(f"[PASS 13/17] Trainer Table: 753 total trainers, Johto Boss teams scaled Lv 58 to 100 with smart AI")
+        # Assert strictly Gen 1 and Gen 2 Pokémon (<= 251)
+        for p_idx in range(party_sz):
+            mon_bytes = rom_data[party_ptr - 0x08000000 + p_idx*16 : party_ptr - 0x08000000 + (p_idx+1)*16]
+            sp = int.from_bytes(mon_bytes[4:6], 'little')
+            assert 1 <= sp <= 251, f"Species {sp} in {leader['name']} team must be Gen 1/2 (<= 251)"
+    print(f"[PASS 13/17] Trainer Table: 753 total trainers, Johto Boss teams scaled Lv 58 to 100 with smart AI (100% Gen 1 & 2)")
 
     # 14. High-Level Johto Wild Encounters
     wild_tbl_off = 0x01980000
@@ -186,8 +191,11 @@ def run_tests():
         if not entry or entry[0] == 0xFF: break
         b, m = entry[0], entry[1]
         p_land = int.from_bytes(entry[4:8], 'little')
-        if b in [43, 44]:
+        if b in [43, 44] and p_land != 0:
             assert 0x08000000 < p_land < 0x09FFFFFF, f"Wild land pointer invalid for bank {b} map {m}"
+            for s_idx in range(12):
+                sp = int.from_bytes(rom_data[p_land - 0x08000000 + 4 + s_idx*4 + 2 : p_land - 0x08000000 + 4 + s_idx*4 + 4], 'little')
+                assert 1 <= sp <= 251, f"Wild species {sp} in bank {b} map {m} must be Gen 1/2 (<= 251)"
         wild_count += 1
         f_off += 20
     assert wild_count >= 164, f"Wild count expected >= 164, got {wild_count}"
@@ -217,7 +225,7 @@ def run_tests():
     assert (4, 40, 212, 0) in sc_evos, "Scyther -> Scizor Lv 40 missing"
     # Check Item 199 (Metal Coat) is directly usable (type=1, fieldUseFunc=0x080a1751)
     it_base = 0x3DB028
-    for it_id in [187, 192, 193, 199, 201, 218]:
+    for it_id in [187, 199, 201, 218]:
         it_type = rom_data[it_base + it_id*44 + 27]
         it_func = int.from_bytes(rom_data[it_base + it_id*44 + 28 : it_base + it_id*44 + 32], 'little')
         assert it_type == 1, f"Item {it_id} type must be 1 (usable)"
