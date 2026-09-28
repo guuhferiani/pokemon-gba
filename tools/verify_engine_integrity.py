@@ -203,10 +203,29 @@ def run_tests():
     tiles_hook = int.from_bytes(rom_data[0x78AA4:0x78AA8], 'little')
     assert pal_hook == 0x08EB0B20, f"Title screen palette hook invalid: {hex(pal_hook)}"
     assert tiles_hook == 0x08EB0B40, f"Title screen tiles hook invalid: {hex(tiles_hook)}"
-    print(f"[PASS 15/15] Title Screen: Custom duel Charizard vs Lugia hooks active at 0x78aa0 / 0x78aa4")
+    print(f"[PASS 15/16] Title Screen: Custom duel Charizard vs Lugia hooks active at 0x78aa0 / 0x78aa4")
+
+    # 16. Trade Evolutions Fix & Direct Evolution Items
+    evo_tbl = 0x259754
+    # Check Haunter (93) has Lv 38 or Moon Stone (94)
+    h_evos = [struct.unpack('<4H', rom_data[evo_tbl + 93*40 + i*8 : evo_tbl + 93*40 + (i+1)*8]) for i in range(2)]
+    assert (4, 38, 94, 0) in h_evos, "Haunter -> Gengar Lv 38 missing"
+    assert (7, 94, 94, 0) in h_evos, "Haunter -> Gengar Moon Stone missing"
+    # Check Scyther (123) has Metal Coat (199) or Lv 40
+    sc_evos = [struct.unpack('<4H', rom_data[evo_tbl + 123*40 + i*8 : evo_tbl + 123*40 + (i+1)*8]) for i in range(2)]
+    assert (7, 199, 212, 0) in sc_evos, "Scyther -> Scizor Metal Coat missing"
+    assert (4, 40, 212, 0) in sc_evos, "Scyther -> Scizor Lv 40 missing"
+    # Check Item 199 (Metal Coat) is directly usable (type=1, fieldUseFunc=0x080a1751)
+    it_base = 0x3DB028
+    for it_id in [187, 192, 193, 199, 201, 218]:
+        it_type = rom_data[it_base + it_id*44 + 27]
+        it_func = int.from_bytes(rom_data[it_base + it_id*44 + 28 : it_base + it_id*44 + 32], 'little')
+        assert it_type == 1, f"Item {it_id} type must be 1 (usable)"
+        assert it_func == 0x080A1751, f"Item {it_id} fieldUseFunc must be EvolutionStone handler"
+    print(f"[PASS 16/16] Trade Evolutions: Solo evolutions verified (Level-up and direct item use active)")
 
     print("==================================================================")
-    print("ALL 15 INTEGRITY CHECKS PASSED WITH 100% SUCCESS!")
+    print("ALL 16 INTEGRITY CHECKS PASSED WITH 100% SUCCESS!")
     print("Pokemon Kanto & Johto Definitivo (32MB GBA Engine) is Fully Functional!")
     print("==================================================================")
     return True

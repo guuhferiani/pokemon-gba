@@ -37,6 +37,8 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 | `0x0000BD` | Checksum Complement Cabeçalho GBA | **`0xFB`** (recalculado dinamicamente) | Garante boot sem erro em emuladores rigorosos de Android (Pizza Boy, RetroArch). |
 | `0x1695bb` | Hook pós-jogo Prof. Carvalho (Oak Lab) | **`0x09831000`** (Script Carvalho pós-Liga) | Dispara autorização internacional e passagem do S.S. Aqua após o Hall da Fama. |
 | `0x3b5538` | Hook Marinheiro Vermilion Port | **`0x09830000`** (Script S.S. Aqua) | Controla embarque para Johto (checa Hall da Fama e autorização do Carvalho). |
+| `0x259754` | `gEvolutionTable` | Dual Evolution Paths | Evoluções sem troca por nível ou pedra/item alternativo para 11 espécies. |
+| `0x3DB028` | `gItems` (Itens de Evolução) | `type=1`, `fieldUseFunc=0x080A1751` | King's Rock, Metal Coat, Dragon Scale, Up-Grade usáveis diretamente da mochila. |
 | `0x78aa0..0x78aa8`| Pointers da Title Screen | Assets Charizard vs Lugia | Free space em `0xeb0b20` / `0x01800000+`. |
 
 ## Save Data (SaveBlock2)
@@ -77,10 +79,13 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - National Dex nativa sempre ativa ✅
 - Checksum GBA de cabeçalho válido para Android ✅
 - Tela de título customizada (Charizard vs Lugia) ✅
-- Suíte de 15 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
+- Evoluções sem Troca (Modificação 1): Alakazam, Machamp, Golem, Gengar, Steelix, Scizor, Kingdra, Slowking, Politoed, Porygon2 e Clamperl por nível ou uso direto de itens da Bag ✅
+- Suíte de 16 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
+- Preservação total dos 4 Lendários de Kanto (Articuno, Zapdos, Moltres, Mewtwo) garantida ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos
 
 - ROM Base: Nintendo / Game Freak
 - Modificações e Launcher: Gustavo Feriani (guuhferiani)
+

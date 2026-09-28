@@ -1476,7 +1476,61 @@ def compile_engine():
         print(f"  [FIX] Evolution scene loop at {hex(EVO_RESTORE_OFFSET)} restored to original instructions.")
 
         # ------------------------------------------------------------------
-        # 11. GBA HEADER COMPLEMENT CHECKSUM FIX (0xBD)
+        # 11. TRADE EVOLUTION FIX: SOLO EVOLUTIONS (Direct Item Use & Level-Up)
+        # ------------------------------------------------------------------
+        # Unlocks all trade-evolution Pokémon in single player:
+        #  - Kadabra -> Alakazam (Lv 38 or Moon Stone)
+        #  - Machoke -> Machamp (Lv 38 or Sun Stone)
+        #  - Graveler -> Golem (Lv 38 or Sun Stone)
+        #  - Haunter -> Gengar (Lv 38 or Moon Stone)
+        #  - Onix -> Steelix (Metal Coat direct use or Lv 40)
+        #  - Scyther -> Scizor (Metal Coat direct use or Lv 40)
+        #  - Seadra -> Kingdra (Dragon Scale direct use, Water Stone or Lv 42)
+        #  - Slowpoke -> Slowking (King's Rock direct use, Water Stone or Slowbro at Lv 37)
+        #  - Poliwhirl -> Politoed (King's Rock direct use, Lv 38 or Poliwrath with Water Stone)
+        #  - Porygon -> Porygon2 (Up-Grade direct use or Lv 35)
+        #  - Clamperl -> Huntail (DeepSeaTooth) / Gorebyss (DeepSeaScale)
+        EVO_TABLE_OFF = 0x259754
+        TRADE_EVOS = [
+            (64,  [(4, 38, 65),  (7, 94, 65)]),       # Kadabra -> Alakazam (Lv 38 or Moon Stone)
+            (67,  [(4, 38, 68),  (7, 93, 68)]),       # Machoke -> Machamp (Lv 38 or Sun Stone)
+            (75,  [(4, 38, 76),  (7, 93, 76)]),       # Graveler -> Golem (Lv 38 or Sun Stone)
+            (93,  [(4, 38, 94),  (7, 94, 94)]),       # Haunter -> Gengar (Lv 38 or Moon Stone)
+            (95,  [(7, 199, 208), (4, 40, 208)]),     # Onix -> Steelix (Metal Coat or Lv 40)
+            (123, [(7, 199, 212), (4, 40, 212)]),     # Scyther -> Scizor (Metal Coat or Lv 40)
+            (117, [(7, 201, 230), (7, 97, 230), (4, 42, 230)]), # Seadra -> Kingdra (Dragon Scale, Water Stone, Lv 42)
+            (79,  [(4, 37, 80),  (7, 187, 199), (7, 97, 199)]),  # Slowpoke -> Slowbro (Lv 37), Slowking (King's Rock / Water Stone)
+            (61,  [(7, 97, 62),  (7, 187, 186), (4, 38, 186)]),  # Poliwhirl -> Poliwrath (Water Stone), Politoed (King's Rock / Lv 38)
+            (137, [(7, 218, 233), (4, 35, 233)]),     # Porygon -> Porygon2 (Up-Grade or Lv 35)
+            (366, [(7, 192, 367), (7, 193, 368)]),     # Clamperl -> Huntail (Tooth), Gorebyss (Scale)
+        ]
+
+        for sp_id, evos in TRADE_EVOS:
+            f.seek(EVO_TABLE_OFF + sp_id * 40)
+            packed_evos = bytearray()
+            for method, param, target in evos:
+                packed_evos.extend(struct.pack('<4H', method, param, target, 0))
+            while len(packed_evos) < 40:
+                packed_evos.extend(struct.pack('<4H', 0, 0, 0, 0))
+            f.write(packed_evos)
+
+        # Enable field "USAR" (ItemUseOutOfBattle_EvolutionStone = 0x080A1751) on special evolution items:
+        # Items: 187 (King's Rock), 192 (DeepSeaTooth), 193 (DeepSeaScale), 199 (Metal Coat), 201 (Dragon Scale), 218 (Up-Grade)
+        ITEM_TABLE_OFF = 0x3db028
+        EVO_ITEMS_TO_ENABLE = [187, 192, 193, 199, 201, 218]
+        for it_id in EVO_ITEMS_TO_ENABLE:
+            it_off = ITEM_TABLE_OFF + it_id * 44
+            # byte 27: type = 1 (Evolution Item / Stone)
+            f.seek(it_off + 27)
+            f.write(bytes([0x01]))
+            # bytes 28..31: fieldUseFunc = 0x080A1751
+            f.seek(it_off + 28)
+            f.write(struct.pack('<I', 0x080A1751))
+
+        print(f"  [EVO] Trade Evolutions unlocked! (Level-up and direct item use active for Gengar, Alakazam, Scizor, Steelix, Kingdra, etc.)")
+
+        # ------------------------------------------------------------------
+        # 12. GBA HEADER COMPLEMENT CHECKSUM FIX (0xBD)
         # ------------------------------------------------------------------
         # Strict Android emulators (RetroArch, Pizza Boy) and flashcarts verify
         # the header complement byte at 0xBD: -(sum(0xA0..0xBC) + 0x19) & 0xFF.
