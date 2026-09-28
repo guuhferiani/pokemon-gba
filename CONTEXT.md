@@ -37,8 +37,12 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 | `0x0000BD` | Checksum Complement Cabeçalho GBA | **`0xFB`** (recalculado dinamicamente) | Garante boot sem erro em emuladores rigorosos de Android (Pizza Boy, RetroArch). |
 | `0x1695bb` | Hook pós-jogo Prof. Carvalho (Oak Lab) | **`0x09831000`** (Script Carvalho pós-Liga) | Dispara autorização internacional e passagem do S.S. Aqua após o Hall da Fama. |
 | `0x3b5538` | Hook Marinheiro Vermilion Port | **`0x09830000`** (Script S.S. Aqua) | Controla embarque para Johto (checa Hall da Fama e autorização do Carvalho). |
-| `0x259754` | `gEvolutionTable` | Dual Evolution Paths | Evoluções sem troca por nível ou pedra/item alternativo para 11 espécies. |
+| `0x259754` | `gEvolutionTable` | Dual Evolution Paths | Evoluções sem troca por nível ou pedra/item alternativo para 10 espécies. |
 | `0x3DB028` | `gItems` (Itens de Evolução) | `type=1`, `fieldUseFunc=0x080A1751` | King's Rock, Metal Coat, Dragon Scale, Up-Grade usáveis diretamente da mochila. |
+| `0x0441B8` | `IsMoveHm` (HMs Esquecíveis) | **`00 20 70 47`** (`MOV R0,#0; BX LR`) | Permite esquecer e substituir qualquer HM a qualquer momento via TM ou nível. |
+| `0x055D30` | `Overworld_GetFlashLevel` (Auto-Flash) | **`00 20 70 47`** (`MOV R0,#0; BX LR`) | Cavernas escuras (Rock Tunnel, Dark Cave) sempre iluminadas sem círculo de sombra. |
+| `0x05C84A` | `PartyHasMonWithSurf` (Surf Prático) | **`01 20 19 E0`** (`MOV R0,#1; B 0x5C882`) | Permite surfar ao pressionar A virado para a água tendo a Insígnia do Pântano. |
+| `0x15FBA4` | `gScriptCmdTable[0x7c]` (checkpartymove) | **`0x099A8001`** (Ponteiro Thumb) | Reponta `checkpartymove` para rotina que aciona o Pokémon líder se ninguém souber o golpe. |
 | `0x78aa0..0x78aa8`| Pointers da Title Screen | Assets Charizard vs Lugia | Free space em `0xeb0b20` / `0x01800000+`. |
 
 ## Save Data (SaveBlock2)
@@ -60,6 +64,7 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 | `0x01940000` | `0x09940000` | Tabela de Nomes de Região Expandida (153 seções com títulos PT-BR de Johto) |
 | `0x01980000` | `0x09980000` | Tabela expandida de selvagens de Johto (164 entradas, Lv 55 a 100) |
 | `0x01990000` | `0x09990000` | Tabela Physical / Special Split Gen 4 (356 golpes) |
+| `0x019A8000` | `0x099A8000` | Rotina ASM `ScrCmd_checkpartymove_practical` (HMs Práticas no Overworld) |
 
 ## Estado (2026-09-27)
 
@@ -84,8 +89,12 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - Experiência Pura Kanto + Johto (100% Gen 1 & 2): Remoção total de espécies e itens da Gen 3 (Hoenn). Dusclops de Morty substituído por Haunter; Walrein de Pryce substituído por Dewgong. Clamperl, Dente do Mar e Escama do Mar removidos. Todos os 10 chefes, 164 tabelas selvagens e 11 lendários/estáticos usam estritamente espécies 1..251 ✅
 - Eventos Lendários de Johto: Gyarados Vermelho (Lago da Fúria Lv 75 com drop da Escama Vermelha), Sudowoodo (Rota 36 Lv 60), Lugia (Whirl Islands Lv 85), Ho-Oh (Bell Tower Lv 85) e o Trio de Feras (Raikou, Entei, Suicune Lv 80 na Torre Queimada) 100% ativos com diálogos PT-BR ✅
 - Preservação total dos 4 Lendários originais de Kanto (Articuno, Zapdos, Moltres, Mewtwo) garantida e verificada ✅
+- Modificação 3: HMs Práticas e Flash Automático (Opção 3):
+  * **HMs 100% Esquecíveis**: Qualquer golpe de HM pode ser deletado ou trocado a qualquer momento via TM ou nível sem ir ao Move Deleter.
+  * **HMs de Campo Práticas (Cut, Rock Smash, Strength, Waterfall, Surf)**: Interação direta com o botão A nas árvores, rochas, pedras e água. Se nenhum Pokémon souber o golpe, o Pokémon líder da equipe executa a ação se você tiver a respectiva insígnia.
+  * **Flash Automático**: Cavernas escuras (Rock Tunnel, Dark Cave, Whirl Islands) ficam sempre 100% iluminadas e nítidas.
 - Campanha Direta e Ágil: Transição direta pós-Liga de Kanto (Indigo Plateau) via S.S. Aqua (Porto de Vermilion) para Johto e Monte Silver (batalha com Gold), sem sidequests desnecessárias de Sevii Islands ✅
-- Suíte de 17 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
+- Suíte de 18 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos

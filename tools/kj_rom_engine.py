@@ -1748,6 +1748,49 @@ def compile_engine():
         print(f"  [EVO] Trade Evolutions unlocked! (Level-up and direct item use active for Gengar, Alakazam, Scizor, Steelix, Kingdra, etc.)")
 
         # ------------------------------------------------------------------
+        # 12. MODERN QoL: PRACTICAL HMS & AUTO-FLASH SYSTEM (OPTION 3)
+        # ------------------------------------------------------------------
+        # A. Deletable HMs: Patch IsMoveHm (0x441b8) to return 0 (MOV R0,#0; BX LR).
+        #    Allows any HM move to be deleted or overwritten anytime via TMs or level-up.
+        f.seek(0x441b8)
+        f.write(bytes([0x00, 0x20, 0x70, 0x47])) # MOV R0, #0; BX LR
+
+        # B. Automatic Cave Lighting (Flash): Patch Overworld_GetFlashLevel (0x55d30) to return 0.
+        #    Rock Tunnel, Dark Cave and Whirl Islands render fully bright without circular darkness!
+        f.seek(0x55d30)
+        f.write(bytes([0x00, 0x20, 0x70, 0x47])) # MOV R0, #0; BX LR
+
+        # C. Overworld Field Surfing: Patch PartyHasMonWithSurf (0x5c84a) so that if player is
+        #    not surfing, it returns 1 (MOV R0, #1; B 0x5C882). Pressing A facing water surfs!
+        f.seek(0x5c84a)
+        f.write(bytes([0x01, 0x20, 0x19, 0xe0])) # MOV R0, #1; B 0x5C882
+
+        # D. Practical Field HMs (Cut, Rock Smash, Strength, Waterfall, Surf):
+        #    Repoint gScriptCmdTable[0x7c] (checkpartymove) at 0x15fba4 to expanded routine at 0x019A8000.
+        #    If no party member learned the move, the lead Pokemon steps up and executes the field action!
+        CHECKPARTYMOVE_EXPANDED_OFF = 0x019A8000
+        CHECKPARTYMOVE_EXPANDED_PTR = 0x08000000 + CHECKPARTYMOVE_EXPANDED_OFF + 1 # Thumb bit
+        
+        # 68-byte routine with literal pool
+        checkpartymove_code = bytes.fromhex(
+            '10b5041c0a4988470a49088806280bd109480b210022094b9847002804d008490880044900200880002010bc02bc0847'
+            'a9c00608' # 0x0806c0a9 (ScrCmd_checkpartymove_orig)
+            'd0700302' # 0x020370d0 (gSpecialVar_Result)
+            '84420202' # 0x02024284 (gPlayerParty)
+            'e9fb0308' # 0x0803fbe9 (GetMonData)
+            'c0700302' # 0x020370c0 (gSpecialVar_0x8004)
+        )
+        f.seek(CHECKPARTYMOVE_EXPANDED_OFF)
+        f.write(checkpartymove_code)
+
+        # Repoint gScriptCmdTable[0x7c]
+        CMD_TABLE_OFF = 0x15F9B4
+        f.seek(CMD_TABLE_OFF + 0x7C * 4)
+        f.write(struct.pack('<I', CHECKPARTYMOVE_EXPANDED_PTR))
+
+        print(f"  [QoL] Practical HMs & Auto-Flash active! (Deletable HMs at 0x441b8, Auto-Flash at 0x55d30, Field Surf at 0x5c84a, Smart Field Moves at 0x19a8000)")
+
+        # ------------------------------------------------------------------
         # 12. GBA HEADER COMPLEMENT CHECKSUM FIX (0xBD)
         # ------------------------------------------------------------------
         # Strict Android emulators (RetroArch, Pizza Boy) and flashcarts verify
