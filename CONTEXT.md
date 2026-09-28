@@ -50,13 +50,14 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 |---|---|---|
 | `0x01800000` | `0x09800000` | Boss Teams de Johto (Falkner a Red/Gold + Executivo Archer) |
 | `0x01810000` | `0x09810000` | Scripts & Diálogos PT-BR dos 8 Líderes de Johto + Archer + Gold |
+| `0x01820000` | `0x09820000` | Scripts Lendários de Johto (Gyarados Vermelho Lv 75, Sudowoodo Lv 60, Lugia, Ho-Oh, Feras) |
 | `0x01830000` | `0x09830000` | Scripts Narrativos Kanto ↔ Johto (Oak, Vermilion Sailor, Johto Sailor, Guide, Elm) |
 | `0x01840000` | `0x09840000` | Tabela expandida de treinadores (753 treinadores com IA competitiva) |
 | `0x01900000` | `0x09900000` | `gMapGroups` expandido (Banks 0..44) |
-| `0x01910000` | `0x09910000` | Headers e tabelas de mapas de Johto (Bank 43: 31 mapas, Bank 44: 11 mapas) |
-| `0x01920000` | `0x09920000` | MapEvents Customizados (New Bark Town, 8 Ginásios, Torre de Rádio, Mt. Silver) |
+| `0x01910000` | `0x09910000` | Headers e tabelas de mapas de Johto (Bank 43: 31 mapas, Bank 44: 14 mapas) |
+| `0x01920000` | `0x09920000` | MapEvents Customizados (New Bark Town, 8 Ginásios, Torre de Rádio, Mt. Silver, Dungeons Lendárias) |
 | `0x01930000` | `0x09930000` | MapConnections (Conexões contínuas e bidirecionais das Rotas 29 a 46 e Cidades) |
-| `0x01940000` | `0x09940000` | Tabela de Nomes de Região Expandida (150 seções com títulos PT-BR de Johto) |
+| `0x01940000` | `0x09940000` | Tabela de Nomes de Região Expandida (153 seções com títulos PT-BR de Johto) |
 | `0x01980000` | `0x09980000` | Tabela expandida de selvagens de Johto (164 entradas, Lv 55 a 100) |
 | `0x01990000` | `0x09990000` | Tabela Physical / Special Split Gen 4 (356 golpes) |
 
@@ -68,7 +69,7 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - Chegada em Johto (New Bark Town) com guia, retorno a Kanto e cura no Lab Elm ✅
 - Banco de Mapas de Johto (Bank 43) completo com 31 mapas (Rotas 29 a 46, Cidades e Mt. Silver) ✅
 - Conexões contínuas de mapa (MapConnections) 100% bidirecionais sem telas de transição ✅
-- Banco de Interiores e Ginásios (Bank 44) completo com os 8 Líderes, Torre de Rádio e Gold ✅
+- Banco de Interiores e Ginásios (Bank 44) completo com os 8 Líderes, Torre de Rádio, Gold e 3 Dungeons Lendárias ✅
 - Scripts de batalha, diálogos PT-BR e entrega de insígnias implementados para todos os líderes ✅
 - Nomes de mapa na tela (pop-up banner) ativos em português para todas as áreas de Johto ✅
 - Encontros selvagens de alto nível (Lv 55 a 100) ativos em todas as rotas de Johto e Monte Silver ✅
@@ -80,8 +81,9 @@ ROM hack de Pokémon FireRed (GBA, BPRE PT-BR) que unifica Kanto e Johto.
 - Checksum GBA de cabeçalho válido para Android ✅
 - Tela de título customizada (Charizard vs Lugia) ✅
 - Evoluções sem Troca (Modificação 1): Alakazam, Machamp, Golem, Gengar, Steelix, Scizor, Kingdra, Slowking, Politoed, Porygon2 e Clamperl por nível ou uso direto de itens da Bag ✅
-- Suíte de 16 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
-- Preservação total dos 4 Lendários de Kanto (Articuno, Zapdos, Moltres, Mewtwo) garantida ✅
+- Eventos Lendários de Johto (Modificação 2): Gyarados Vermelho (Lago da Fúria Lv 75 com drop da Escama Vermelha), Sudowoodo (Rota 36 Lv 60), Lugia (Whirl Islands Lv 85), Ho-Oh (Bell Tower Lv 85) e o Trio de Feras (Raikou, Entei, Suicune Lv 80 na Torre Queimada) 100% ativos com diálogos PT-BR ✅
+- Preservação total dos 4 Lendários originais de Kanto (Articuno, Zapdos, Moltres, Mewtwo) garantida e verificada ✅
+- Suíte de 17 testes de integridade com 100% de sucesso (`tools/verify_engine_integrity.py`) ✅
 - Launcher desktop com gerenciamento de saves ✅
 
 ## Créditos

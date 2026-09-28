@@ -837,6 +837,188 @@ def compile_engine():
             print(f"  [BOSS SCRIPT] {ld['id'].upper()} compiled at {hex(ptr_scr_start)} (Trainer {ld['trainer_id']})")
 
         # ------------------------------------------------------------------
+        # 4B. JOHTO LEGENDARY EVENTS & STATIC BOSS SCRIPTS (Offset 0x01820000)
+        # ------------------------------------------------------------------
+        # Scripts for Red Gyarados (75), Sudowoodo (60), Lugia (85), Ho-Oh (85),
+        # Raikou (80), Entei (80), Suicune (80).
+        # Flags: 0x02D0..0x02D6 (Original Kanto legendaries at 0x2BC..0x2C0 remain 100% untouched)
+        LEGENDARY_SCRIPTS_ALLOC = 0x01820000
+        cur_leg_off = LEGENDARY_SCRIPTS_ALLOC
+        leg_script_ptrs = {}
+
+        # 1. Red Gyarados (Lake of Rage Lv 75, gives Red Scale, flag 0x02D0)
+        txt_gya_intro = encode_gen3("Gyaaaarrrgh!\\pO Gyarados Vermelho emergiu em fúria das profundezas do lago!")
+        txt_gya_after = encode_gen3("O Gyarados Vermelho se acalmou e mergulhou nas profundezas.\\pUma reluzente Escama Vermelha foi deixada na margem!")
+        ptr_gya_intro = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_gya_intro); cur_leg_off += len(txt_gya_intro)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        ptr_gya_after = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_gya_after); cur_leg_off += len(txt_gya_after)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+
+        ptr_gya_start = 0x08000000 + cur_leg_off
+        gya_scr = bytearray()
+        gya_scr.extend([0x6A, 0x5A]) # lock, faceplayer
+        gya_scr.extend([0x30, 130, 0, 0, 0]) # playmoncry 130, 0
+        gya_scr.extend([0x0F, 0x00]) # loadpointer 0
+        gya_scr.extend(struct.pack('<I', ptr_gya_intro))
+        gya_scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd MSG_NORMAL, waitmsg
+        gya_scr.extend([0x33, 0x56, 0x01, 0x00]) # waitmoncry
+        gya_scr.extend([0xB6, 130, 0, 75, 0xBE, 0]) # setwildbattle 130, Lv 75, Item 0xBE (Red Scale)
+        gya_scr.extend([0x29, 0x07, 0x08]) # setflag 0x807 (special battle)
+        gya_scr.extend([0x25, 0x38, 0x01]) # special 0x138 (Start scripted wild battle)
+        gya_scr.extend([0x27]) # waitstate
+        gya_scr.extend([0x2A, 0x07, 0x08]) # clearflag 0x807
+        gya_scr.extend([0x26, 0x0D, 0x80, 0xB4, 0x00]) # special2 VAR_RESULT, 0xB4
+
+        ptr_gya_succ = ptr_gya_start + len(gya_scr) + 24
+        gya_scr.extend([0x21, 0x0D, 0x80, 0x01, 0x00]) # compare VAR_RESULT, 1
+        gya_scr.extend([0x06, 0x01]) # goto_if_eq
+        gya_scr.extend(struct.pack('<I', ptr_gya_succ))
+        gya_scr.extend([0x21, 0x0D, 0x80, 0x04, 0x00]) # compare VAR_RESULT, 4
+        gya_scr.extend([0x06, 0x01]) # goto_if_eq
+        gya_scr.extend(struct.pack('<I', ptr_gya_succ))
+        gya_scr.extend([0x6B, 0x02]) # release, end (ran away)
+
+        # Success branch:
+        gya_scr.extend([0x29, 0xD0, 0x02]) # setflag 0x02D0 (FLAG_HIDE_RED_GYARADOS)
+        gya_scr.extend([0x1A, 0xBE, 0x00, 0x01, 0x00]) # giveitem 0xBE (Red Scale), 1
+        gya_scr.extend([0x0F, 0x00])
+        gya_scr.extend(struct.pack('<I', ptr_gya_after))
+        gya_scr.extend([0x09, 0x04, 0x6C, 0x02])
+        gya_scr.extend([0x5C, 0x00, 0x5C, 0x01, 0x6B, 0x02]) # fadescreen 0, fadescreen 1, release, end
+
+        f.seek(cur_leg_off); f.write(gya_scr); cur_leg_off += len(gya_scr)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        leg_script_ptrs['gyarados'] = ptr_gya_start
+        print(f"  [LEGEND SCRIPT] GYARADOS VERMELHO compiled at {hex(ptr_gya_start)} (Lv 75 Shiny event)")
+
+        # 2. Sudowoodo (Route 36 Lv 60, water spray prompt YES/NO, flag 0x02D1)
+        txt_sudo_intro = encode_gen3("Uma árvore estranha está bloqueando a passagem... Ela parece balançar suavemente.\\pDeseja usar o Regador de água fresca na árvore?")
+        txt_sudo_no = encode_gen3("É melhor deixá-la quieta por enquanto.")
+        txt_sudo_yes = encode_gen3("Você jogou água fresca na árvore estranha!\\pA árvore odeia água e atacou furiosamente!")
+        txt_sudo_after = encode_gen3("A árvore estranha fugiu assustada!\\pO caminho pela Rota 36 agora está totalmente liberado!")
+
+        ptr_sudo_intro = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_sudo_intro); cur_leg_off += len(txt_sudo_intro)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        ptr_sudo_no = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_sudo_no); cur_leg_off += len(txt_sudo_no)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        ptr_sudo_yes = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_sudo_yes); cur_leg_off += len(txt_sudo_yes)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        ptr_sudo_after = 0x08000000 + cur_leg_off
+        f.seek(cur_leg_off); f.write(txt_sudo_after); cur_leg_off += len(txt_sudo_after)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+
+        ptr_sudo_start = 0x08000000 + cur_leg_off
+        sudo_scr = bytearray()
+        sudo_scr.extend([0x6A, 0x5A]) # lock, faceplayer
+        sudo_scr.extend([0x0F, 0x00]) # loadpointer 0
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_intro))
+        sudo_scr.extend([0x09, 0x05]) # callstd MSG_YESNO
+        sudo_scr.extend([0x21, 0x0D, 0x80, 0x01, 0x00]) # compare VAR_RESULT, 1
+
+        ptr_sudo_yes_branch = ptr_sudo_start + len(sudo_scr) + 6 + 18
+        sudo_scr.extend([0x06, 0x01]) # goto_if_eq
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_yes_branch))
+
+        # NO branch:
+        sudo_scr.extend([0x0F, 0x00])
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_no))
+        sudo_scr.extend([0x09, 0x04, 0x6C, 0x02, 0x6B, 0x02]) # callstd, waitmsg, release, end
+
+        # YES branch:
+        sudo_scr.extend([0x0F, 0x00])
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_yes))
+        sudo_scr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd, waitmsg
+        sudo_scr.extend([0x30, 185, 0, 0, 0]) # playmoncry 185, 0
+        sudo_scr.extend([0x33, 0x56, 0x01, 0x00]) # waitmoncry
+        sudo_scr.extend([0xB6, 185, 0, 60, 0, 0]) # setwildbattle 185, Lv 60, 0
+        sudo_scr.extend([0x29, 0x07, 0x08]) # setflag 0x807
+        sudo_scr.extend([0x25, 0x38, 0x01]) # special 0x138
+        sudo_scr.extend([0x27]) # waitstate
+        sudo_scr.extend([0x2A, 0x07, 0x08]) # clearflag 0x807
+        sudo_scr.extend([0x26, 0x0D, 0x80, 0xB4, 0x00]) # special2 VAR_RESULT, 0xB4
+
+        ptr_sudo_succ = ptr_sudo_start + len(sudo_scr) + 24
+        sudo_scr.extend([0x21, 0x0D, 0x80, 0x01, 0x00])
+        sudo_scr.extend([0x06, 0x01])
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_succ))
+        sudo_scr.extend([0x21, 0x0D, 0x80, 0x04, 0x00])
+        sudo_scr.extend([0x06, 0x01])
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_succ))
+        sudo_scr.extend([0x6B, 0x02]) # ran away
+
+        # Success branch:
+        sudo_scr.extend([0x29, 0xD1, 0x02]) # setflag 0x02D1 (FLAG_HIDE_SUDOWOODO)
+        sudo_scr.extend([0x0F, 0x00])
+        sudo_scr.extend(struct.pack('<I', ptr_sudo_after))
+        sudo_scr.extend([0x09, 0x04, 0x6C, 0x02])
+        sudo_scr.extend([0x5C, 0x00, 0x5C, 0x01, 0x6B, 0x02])
+
+        f.seek(cur_leg_off); f.write(sudo_scr); cur_leg_off += len(sudo_scr)
+        if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+        leg_script_ptrs['sudowoodo'] = ptr_sudo_start
+        print(f"  [LEGEND SCRIPT] SUDOWOODO compiled at {hex(ptr_sudo_start)} (Lv 60)")
+
+        # 3. Legendary Dungeons: Lugia, Ho-Oh, Raikou, Entei, Suicune
+        LEGENDARY_DEFS = [
+            ('lugia',   249, 85, 0x02D2, "Gyaaa-ooooh!\\pO Guardião dos Mares, Lugia, desceu em um turbilhão sagrado de ventos e águas profundas!", "O canto sagrado dos mares ecoou suavemente pelas cavernas profundas..."),
+            ('hooh',    250, 85, 0x02D3, "Shaaaa-oooo!\\pAs asas majestosas do lendário Ho-Oh resplandecem com a chama sagrada do arco-íris!", "Uma reluzente pena com as sete cores do arco-íris flutuou suavemente ao vento..."),
+            ('raikou',  243, 80, 0x02D4, "Rrrraaa-oooo!\\pO trovão relampeja com intensidade nos olhos da Fera Elétrica, Raikou!", "O eco dos relâmpagos ribombou ao longe enquanto Raikou partia veloz..."),
+            ('entei',   244, 80, 0x02D5, "Bwwwooo-rrr!\\pO magma arde impetuosamente no peito da Fera Vulcânica, Entei!", "Uma labareda cálida dançou no ar enquanto Entei corria pelas terras de Johto..."),
+            ('suicune', 245, 80, 0x02D6, "Glllaaa-shhh!\\pA brisa purificadora da aurora envolve a nobre Fera das Águas, Suicune!", "As águas límpidas refletiram o brilho da aurora enquanto Suicune saltava graciosa..."),
+        ]
+
+        for leg_id, sp_id, lvl, flag_id, intro_str, after_str in LEGENDARY_DEFS:
+            txt_in = encode_gen3(intro_str)
+            txt_af = encode_gen3(after_str)
+            ptr_in = 0x08000000 + cur_leg_off
+            f.seek(cur_leg_off); f.write(txt_in); cur_leg_off += len(txt_in)
+            if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+            ptr_af = 0x08000000 + cur_leg_off
+            f.seek(cur_leg_off); f.write(txt_af); cur_leg_off += len(txt_af)
+            if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+
+            ptr_start = 0x08000000 + cur_leg_off
+            lscr = bytearray()
+            lscr.extend([0x6A, 0x5A]) # lock, faceplayer
+            lscr.extend([0x30, sp_id & 0xFF, (sp_id >> 8) & 0xFF, 0, 0]) # playmoncry
+            lscr.extend([0x0F, 0x00])
+            lscr.extend(struct.pack('<I', ptr_in))
+            lscr.extend([0x09, 0x04, 0x6C, 0x02]) # callstd, waitmsg
+            lscr.extend([0x33, 0x56, 0x01, 0x00]) # waitmoncry
+            lscr.extend([0xB6, sp_id & 0xFF, (sp_id >> 8) & 0xFF, lvl, 0, 0]) # setwildbattle
+            lscr.extend([0x29, 0x07, 0x08]) # setflag 0x807
+            lscr.extend([0x25, 0x38, 0x01]) # special 0x138
+            lscr.extend([0x27]) # waitstate
+            lscr.extend([0x2A, 0x07, 0x08]) # clearflag 0x807
+            lscr.extend([0x26, 0x0D, 0x80, 0xB4, 0x00]) # special2 VAR_RESULT, 0xB4
+
+            ptr_succ = ptr_start + len(lscr) + 24
+            lscr.extend([0x21, 0x0D, 0x80, 0x01, 0x00])
+            lscr.extend([0x06, 0x01])
+            lscr.extend(struct.pack('<I', ptr_succ))
+            lscr.extend([0x21, 0x0D, 0x80, 0x04, 0x00])
+            lscr.extend([0x06, 0x01])
+            lscr.extend(struct.pack('<I', ptr_succ))
+            lscr.extend([0x6B, 0x02]) # ran away
+
+            # Success:
+            lscr.extend([0x29, flag_id & 0xFF, (flag_id >> 8) & 0xFF]) # setflag
+            lscr.extend([0x0F, 0x00])
+            lscr.extend(struct.pack('<I', ptr_af))
+            lscr.extend([0x09, 0x04, 0x6C, 0x02])
+            lscr.extend([0x5C, 0x00, 0x5C, 0x01, 0x6B, 0x02])
+
+            f.seek(cur_leg_off); f.write(lscr); cur_leg_off += len(lscr)
+            if cur_leg_off % 4 != 0: cur_leg_off += (4 - (cur_leg_off % 4))
+            leg_script_ptrs[leg_id] = ptr_start
+            print(f"  [LEGEND SCRIPT] {leg_id.upper()} compiled at {hex(ptr_start)} (Species {sp_id}, Lv {lvl})")
+
+        # ------------------------------------------------------------------
         # 5. PASSO 1: MAP EVENTS (BANK 43 OVERWORLD & BANK 44 INTERIORS)
         # ------------------------------------------------------------------
         MAP_EVENTS_ALLOC = 0x01920000
@@ -894,20 +1076,34 @@ def compile_engine():
             pack_warp(32, 28, 3, 0, 3, 44),
             pack_warp(14, 15, 3, 0, 9, 44)
         ])
-        # Map 14 (Ecruteak City): Morty Gym door at (20, 18) -> Bank 44 Map 4 Warp 0
-        b43_events[14] = make_events_block([], [pack_warp(20, 18, 3, 0, 4, 44)])
+        # Map 12 (Route 36): Sudowoodo blocking crossroad at (20, 10), Flag 0x02D1
+        b43_events[12] = make_events_block([
+            pack_person(1, 0x6D, 20, 10, 3, 1, 0, leg_script_ptrs['sudowoodo'], 0x02D1)
+        ], [])
+        # Map 14 (Ecruteak City): Morty Gym (44, 4), Bell Tower (44, 12), Burned Tower (44, 13)
+        b43_events[14] = make_events_block([], [
+            pack_warp(20, 18, 3, 0, 4, 44),
+            pack_warp(18, 5, 3, 0, 12, 44),
+            pack_warp(8, 5, 3, 0, 13, 44)
+        ])
         # Map 17 (Olivine City): Jasmine Gym door at (18, 18) -> Bank 44 Map 6 Warp 0
         b43_events[17] = make_events_block([], [pack_warp(18, 18, 3, 0, 6, 44)])
+        # Map 19 (Route 41): Whirl Islands Depths entrance at (10, 10) -> Bank 44 Map 11 Warp 0
+        b43_events[19] = make_events_block([], [pack_warp(10, 10, 3, 0, 11, 44)])
         # Map 20 (Cianwood City): Chuck Gym door at (12, 12) -> Bank 44 Map 5 Warp 0
         b43_events[20] = make_events_block([], [pack_warp(12, 12, 3, 0, 5, 44)])
         # Map 22 (Mahogany Town): Pryce Gym door at (14, 14) -> Bank 44 Map 7 Warp 0
         b43_events[22] = make_events_block([], [pack_warp(14, 14, 3, 0, 7, 44)])
+        # Map 24 (Lake of Rage): Red Gyarados Lv 75 at (14, 14), Flag 0x02D0
+        b43_events[24] = make_events_block([
+            pack_person(1, 0x5B, 14, 14, 3, 1, 0, leg_script_ptrs['gyarados'], 0x02D0)
+        ], [])
         # Map 26 (Blackthorn City): Clair Gym door at (20, 20) -> Bank 44 Map 8 Warp 0
         b43_events[26] = make_events_block([], [pack_warp(20, 20, 3, 0, 8, 44)])
         # Map 30 (Mt. Silver Exterior): Summit Cave entrance at (12, 5) -> Bank 44 Map 10 Warp 0
         b43_events[30] = make_events_block([], [pack_warp(12, 5, 3, 0, 10, 44)])
 
-        # Bank 44 Events (Interiors & Gyms)
+        # Bank 44 Events (Interiors, Gyms & Legendary Dungeons)
         b44_events = {}
         # Map 0: Elm Lab (Prof. Elm at 6,4; Exit door at 6,12 -> Bank 43 Map 0)
         b44_events[0] = make_events_block(
@@ -964,7 +1160,26 @@ def compile_engine():
             [pack_person(1, 0x00, 10, 6, 3, 1, 0, leader_script_ptrs['gold'])],
             [pack_warp(10, 16, 3, 0, 30, 43)]
         )
-        print(f"  [EVENTS] Map Events successfully compiled at {hex(MAP_EVENTS_ALLOC)}")
+        # Map 11: Whirl Islands Depths (Lugia at 10,6; Exit at 10,16 -> Bank 43 Map 19)
+        b44_events[11] = make_events_block(
+            [pack_person(1, 0x90, 10, 6, 3, 1, 0, leg_script_ptrs['lugia'], 0x02D2)],
+            [pack_warp(10, 16, 3, 0, 19, 43)]
+        )
+        # Map 12: Bell Tower Summit (Ho-Oh at 10,6; Exit at 10,16 -> Bank 43 Map 14)
+        b44_events[12] = make_events_block(
+            [pack_person(1, 0x91, 10, 6, 3, 1, 0, leg_script_ptrs['hooh'], 0x02D3)],
+            [pack_warp(10, 16, 3, 1, 14, 43)]
+        )
+        # Map 13: Burned Tower (Raikou at 5,6; Entei at 11,6; Suicune at 8,8; Exit at 8,14 -> Bank 43 Map 14)
+        b44_events[13] = make_events_block(
+            [
+                pack_person(1, 0x82, 5, 6, 3, 1, 0, leg_script_ptrs['raikou'], 0x02D4),
+                pack_person(2, 0x8C, 11, 6, 3, 1, 0, leg_script_ptrs['entei'], 0x02D5),
+                pack_person(3, 0x96, 8, 8, 3, 1, 0, leg_script_ptrs['suicune'], 0x02D6),
+            ],
+            [pack_warp(8, 14, 3, 2, 14, 43)]
+        )
+        print(f"  [EVENTS] Map Events successfully compiled at {hex(MAP_EVENTS_ALLOC)} (Gyms + Legendary Dungeons armed)")
 
         # ------------------------------------------------------------------
         # 6. PASSO 2: JOHTO CONTINUOUS OVERWORLD MAP CONNECTIONS (0x01930000)
@@ -1079,11 +1294,14 @@ def compile_engine():
             235: "GINÁSIO DE BLACKTHORN",
             236: "TORRE DE RÁDIO",
             237: "PICO DO MT. SILVER",
+            238: "PROFUNDEZAS DE WHIRL",
+            239: "TOPO DA BELL TOWER",
+            240: "TORRE QUEIMADA",
         }
 
         # Encode and write strings
         johto_sec_ptrs = []
-        for sec_id in range(197, 238):
+        for sec_id in range(197, 241):
             name = JOHTO_SECTION_NAMES.get(sec_id, "JOHTO")
             enc = encode_gen3(name)
             ptr_str = 0x08000000 + cur_rname_str_off
@@ -1166,17 +1384,20 @@ def compile_engine():
         ]
 
         JOHTO_INTERIOR_MAP_DEFS = [
-            (0,  "Prof. Elm Lab",           0x82d5754, 0x0113, 197, 5),
-            (1,  "Violet Gym - Falkner",    0x82d732c, 0x0119, 228, 5),
-            (2,  "Azalea Gym - Bugsy",      0x831bee4, 0x0119, 229, 5),
-            (3,  "Goldenrod Gym - Whitney", 0x82d5990, 0x0119, 230, 5),
-            (4,  "Ecruteak Gym - Morty",    0x82d6af0, 0x0119, 231, 5),
-            (5,  "Cianwood Gym - Chuck",    0x82d86ac, 0x0119, 232, 5),
-            (6,  "Olivine Gym - Jasmine",   0x82d732c, 0x0119, 233, 5),
-            (7,  "Mahogany Gym - Pryce",    0x82d5f84, 0x0119, 234, 5),
-            (8,  "Blackthorn Gym - Clair",  0x82d6370, 0x0119, 235, 5),
-            (9,  "Goldenrod Radio Tower",   0x831a560, 0x0158, 236, 5),
-            (10, "Mt. Silver Summit",       0x82e3f04, 0x0132, 237, 4),
+            (0,  "Prof. Elm Lab",               0x82d5754, 0x0113, 197, 5),
+            (1,  "Violet Gym - Falkner",        0x82d732c, 0x0119, 228, 5),
+            (2,  "Azalea Gym - Bugsy",          0x831bee4, 0x0119, 229, 5),
+            (3,  "Goldenrod Gym - Whitney",     0x82d5990, 0x0119, 230, 5),
+            (4,  "Ecruteak Gym - Morty",        0x82d6af0, 0x0119, 231, 5),
+            (5,  "Cianwood Gym - Chuck",        0x82d86ac, 0x0119, 232, 5),
+            (6,  "Olivine Gym - Jasmine",       0x82d732c, 0x0119, 233, 5),
+            (7,  "Mahogany Gym - Pryce",        0x82d5f84, 0x0119, 234, 5),
+            (8,  "Blackthorn Gym - Clair",      0x82d6370, 0x0119, 235, 5),
+            (9,  "Goldenrod Radio Tower",       0x831a560, 0x0158, 236, 5),
+            (10, "Mt. Silver Summit",           0x82e3f04, 0x0132, 237, 4),
+            (11, "Whirl Islands Depths - Lugia", 0x83302d8, 0x0132, 238, 4),
+            (12, "Bell Tower Summit - Ho-Oh",    0x82d6370, 0x0117, 239, 4),
+            (13, "Burned Tower - Beasts",        0x82d6af0, 0x0117, 240, 5),
         ]
 
         # Compile Bank 43 MapHeaders
